@@ -19,9 +19,10 @@ Nothing else is needed on the shop PC: Node.js is bundled, and the window uses M
 | `C:\KPR Pitstop\data` | `kpr.db` (all data), `backups\`, `uploads\`, `logs\`, `config.json`. **Never touched by updates.** |
 
 - **Updating a client:** run the new version's installer. It stops the app, replaces `program`, and on start-up the database is upgraded automatically.
-- **Starting automatically:** the app starts in the background when Windows starts, and the desktop icon just opens the window.
+- **Starting automatically:** the app starts in the background when Windows starts (via the registry key `HKCU\...\Run`), and the desktop icon just opens the window.
 - **Other devices:** Settings → *Use on other devices* shows the address to open, e.g. `http://192.168.1.5:3780`.
 - **Stopping the app:** use Start menu → *Stop KPR Pitstop*. Run this before copying data by hand.
+- **Forgotten password:** staff passwords are reset by the owner (*Staff → Edit*). If the owner forgets, open Start menu → **Reset KPR password** on the shop PC (or run `program\launcher.js --reset-password`). It lists every username, sets a new password, re-enables the login, and records the reset in the activity log. It only works on the PC that holds the data.
 - **Troubleshooting:** run `program\node\node.exe program\launcher.js --foreground` to see the server output. Logs are in `data\logs`.
 - **Uninstalling:** run `powershell -ExecutionPolicy Bypass -File uninstall.ps1`. The data folder is kept.
 

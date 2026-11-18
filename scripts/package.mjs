@@ -88,6 +88,11 @@ WHERE THINGS ARE
 UPDATING
   Run the new version's "Install KPR Pitstop.cmd". Data is kept and upgraded automatically.
 
+FORGOT USERNAME OR PASSWORD
+  Staff: the owner sets a new one in Staff > Edit.
+  Owner: on this PC open Start menu > KPR Pitstop > "Reset KPR password".
+         It lists all usernames and sets a new password.
+
 BACKUPS
   Automatic daily backup in C:\\KPR Pitstop\\data\\backups (last 30 kept).
   Settings > Backups to download a copy to a pen drive or restore.

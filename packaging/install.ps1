@@ -52,9 +52,30 @@ New-Item -ItemType Directory -Force -Path $startMenu | Out-Null
 New-Shortcut (Join-Path $desktop "KPR Pitstop.lnk") "" "Open KPR Pitstop"
 New-Shortcut (Join-Path $startMenu "KPR Pitstop.lnk") "" "Open KPR Pitstop"
 New-Shortcut (Join-Path $startMenu "Stop KPR Pitstop.lnk") "--stop" "Stop the KPR Pitstop background service"
-$startup = Join-Path ([Environment]::GetFolderPath("Startup")) "KPR Pitstop (background).lnk"
-if ($NoStartup) { Remove-Item $startup -ErrorAction SilentlyContinue }
-else { New-Shortcut $startup "--server-only" "Start KPR Pitstop when Windows starts" }
+# Forgotten password tool: opens a console window on this PC only
+try {
+  $r = Join-Path $startMenu "Reset KPR password.lnk"
+  if (Test-Path -LiteralPath $r) { Remove-Item -LiteralPath $r -Force }
+  $s = $shell.CreateShortcut($r)
+  $s.TargetPath = "$program\node\node.exe"
+  $s.Arguments = "`"$program\launcher.js`" --reset-password"
+  $s.WorkingDirectory = $program
+  $s.IconLocation = "$program\kpr.ico,0"
+  $s.Description = "Set a new password if a login is forgotten"
+  $s.Save()
+} catch { Write-Host "  Could not create the password reset shortcut." -ForegroundColor Yellow }
+# Start in the background when Windows starts (registry "Run" key - not blocked by folder protection)
+$runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$oldStartup = Join-Path ([Environment]::GetFolderPath("Startup")) "KPR Pitstop (background).lnk"
+Remove-Item -LiteralPath $oldStartup -ErrorAction SilentlyContinue
+if ($NoStartup) {
+  Remove-ItemProperty -Path $runKey -Name "KPR Pitstop" -ErrorAction SilentlyContinue
+} else {
+  try {
+    Set-ItemProperty -Path $runKey -Name "KPR Pitstop" -Value "`"$env:WINDIR\System32\wscript.exe`" `"$program\KPR Pitstop.vbs`" --server-only"
+    Write-Host "  Starts automatically with Windows."
+  } catch { Write-Host "  Could not set automatic start: $($_.Exception.Message)" -ForegroundColor Yellow }
+}
 
 # 4. Allow phones / other counters on the shop network (needs admin; skipped otherwise)
 try {

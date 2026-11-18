@@ -34,6 +34,16 @@ export default async function LoginPage() {
             </label>
             <Submit className="btn-primary w-full">Log in</Submit>
           </ActionForm>
+          <details className="mt-4 text-xs text-gray-500">
+            <summary className="cursor-pointer hover:text-gray-700">Forgot username or password?</summary>
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              <li><b>Staff:</b> ask the owner. They can set a new password in <i>Staff → Edit</i>.</li>
+              <li>
+                <b>Owner:</b> on the main shop computer, open the <b>Start menu → KPR Pitstop → Reset KPR password</b>.
+                It lists all usernames and lets you set a new password.
+              </li>
+            </ul>
+          </details>
         </div>
       </div>
     </main>
