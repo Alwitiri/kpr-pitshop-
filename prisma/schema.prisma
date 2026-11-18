@@ -1,0 +1,462 @@
+// KPR Pitstop N Sportz – Business Management System
+// PostgreSQL (Render / Supabase / local). Set DATABASE_URL in .env.
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Staff & security ─────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         String // OWNER | MANAGER | CASHIER | INVENTORY | TECHNICIAN
+  phone        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  sales          Sale[]
+  attendance     Attendance[]
+  auditLogs      AuditLog[]
+  jobCards       JobCard[]       @relation("Technician")
+  stockMovements StockMovement[]
+  expenses       Expense[]
+}
+
+model Attendance {
+  id     Int     @id @default(autoincrement())
+  userId Int
+  date   String // YYYY-MM-DD
+  status String // PRESENT | ABSENT | HALF_DAY | LEAVE
+  note   String?
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model ShopSettings {
+  id              Int     @id @default(1)
+  shopName        String  @default("KPR Pitstop N Sportz")
+  tagline         String? @default("Bike & Car Accessories")
+  address         String? @default("")
+  phone           String? @default("")
+  email           String? @default("")
+  gstin           String? @default("")
+  stateName       String  @default("Tamil Nadu")
+  stateCode       String  @default("33")
+  invoicePrefix   String  @default("KPR")
+  invoiceFooter   String? @default("Thank you for shopping with us! Goods once sold can be exchanged within 7 days with bill.")
+  defaultMinStock Int     @default(5)
+  deadStockDays   Int     @default(90)
+  bankDetails     String? @default("")
+  upiId           String? @default("")
+}
+
+model Counter {
+  name  String @id
+  value Int    @default(0)
+}
+
+// ───────────────────────────── Catalogue ─────────────────────────────
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  type     String    @default("BOTH") // BIKE | CAR | BOTH
+  products Product[]
+}
+
+model Brand {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id             Int      @id @default(autoincrement())
+  name           String
+  sku            String   @unique
+  barcode        String?  @unique
+  categoryId     Int?
+  brandId        Int?
+  supplierId     Int?
+  variantGroup   String? // products sharing a group are variants of each other
+  size           String?
+  color          String?
+  unit           String   @default("PCS")
+  hsn            String?
+  purchasePrice  Float    @default(0) // excluding GST
+  sellingPrice   Float    @default(0) // including GST
+  mrp            Float    @default(0)
+  gstRate        Float    @default(18)
+  stock          Float    @default(0)
+  minStock       Float    @default(5)
+  warrantyMonths Int      @default(0)
+  imageUrl       String?
+  description    String?
+  location       String? // shelf / rack
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  category      Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand         Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  supplier      Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  fitments      ProductFitment[]
+  movements     StockMovement[]
+  saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
+  jobCardParts  JobCardPart[]
+
+  @@index([name])
+}
+
+// Which vehicles a product fits (bike/car compatibility)
+model ProductFitment {
+  id          Int     @id @default(autoincrement())
+  productId   Int
+  vehicleType String  @default("BIKE") // BIKE | CAR
+  make        String
+  model       String?
+  yearFrom    Int?
+  yearTo      Int?
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([make, model])
+}
+
+// Every change to stock is recorded here – the stock ledger.
+model StockMovement {
+  id           Int      @id @default(autoincrement())
+  productId    Int
+  type         String // OPENING | PURCHASE | SALE | SALE_RETURN | PURCHASE_RETURN | ADJUSTMENT | DAMAGE | JOB_USE | SALE_CANCEL | STOCK_CHECK
+  qty          Float // signed: + in, - out
+  balanceAfter Float
+  refType      String?
+  refId        Int?
+  note         String?
+  userId       Int?
+  createdAt    DateTime @default(now())
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([createdAt])
+}
+
+// ───────────────────────────── Suppliers & purchases ─────────────────────────────
+
+model Supplier {
+  id             Int      @id @default(autoincrement())
+  name           String
+  contactPerson  String?
+  phone          String?
+  email          String?
+  gstin          String?
+  address        String?
+  openingBalance Float    @default(0) // amount KPR owes at start
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  products  Product[]
+  purchases Purchase[]
+  payments  SupplierPayment[]
+  returns   PurchaseReturn[]
+}
+
+model Purchase {
+  id             Int      @id @default(autoincrement())
+  number         String   @unique
+  supplierId     Int
+  supplierBillNo String?
+  date           DateTime @default(now())
+  subtotal       Float    @default(0) // before tax
+  taxTotal       Float    @default(0)
+  otherCharges   Float    @default(0)
+  discount       Float    @default(0)
+  total          Float    @default(0)
+  paidAmount     Float    @default(0)
+  notes          String?
+  attachmentUrl  String?
+  createdById    Int?
+  createdAt      DateTime @default(now())
+
+  supplier Supplier          @relation(fields: [supplierId], references: [id])
+  items    PurchaseItem[]
+  payments SupplierPayment[]
+  returns  PurchaseReturn[]
+
+  @@index([date])
+}
+
+model PurchaseItem {
+  id          Int      @id @default(autoincrement())
+  purchaseId  Int
+  productId   Int
+  qty         Float
+  unitCost    Float // excluding GST
+  gstRate     Float
+  taxAmount   Float
+  total       Float
+  returnedQty Float    @default(0)
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model SupplierPayment {
+  id         Int       @id @default(autoincrement())
+  supplierId Int
+  purchaseId Int?
+  amount     Float
+  method     String // CASH | UPI | CARD | BANK | CHEQUE
+  reference  String?
+  date       DateTime  @default(now())
+  note       String?
+  supplier   Supplier  @relation(fields: [supplierId], references: [id])
+  purchase   Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+}
+
+model PurchaseReturn {
+  id         Int       @id @default(autoincrement())
+  number     String    @unique
+  supplierId Int
+  purchaseId Int?
+  date       DateTime  @default(now())
+  total      Float
+  note       String?
+  items      String // JSON: [{productId,name,qty,unitCost,total}]
+  supplier   Supplier  @relation(fields: [supplierId], references: [id])
+  purchase   Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+}
+
+// ───────────────────────────── Customers (CRM) ─────────────────────────────
+
+model Customer {
+  id             Int       @id @default(autoincrement())
+  name           String
+  phone          String?   @unique
+  altPhone       String?
+  email          String?
+  address        String?
+  gstin          String?
+  birthday       String? // MM-DD
+  tags           String? // comma separated
+  notes          String?
+  openingBalance Float     @default(0) // amount customer owes at start
+  // WhatsApp consent – captured now, used when the WhatsApp module is added.
+  whatsappOptIn  Boolean   @default(false)
+  optInAt        DateTime?
+  optInSource    String?
+  createdAt      DateTime  @default(now())
+
+  vehicles Vehicle[]
+  sales    Sale[]
+  payments Payment[]
+  jobCards JobCard[]
+
+  @@index([name])
+}
+
+model Vehicle {
+  id         Int       @id @default(autoincrement())
+  customerId Int
+  type       String    @default("BIKE") // BIKE | CAR
+  make       String
+  model      String?
+  year       Int?
+  regNo      String?
+  color      String?
+  createdAt  DateTime  @default(now())
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sales      Sale[]
+  jobCards   JobCard[]
+}
+
+// ───────────────────────────── Sales ─────────────────────────────
+
+model Sale {
+  id            Int       @id @default(autoincrement())
+  invoiceNo     String    @unique
+  customerId    Int?
+  vehicleId     Int?
+  customerName  String? // walk-in name
+  customerPhone String?
+  date          DateTime  @default(now())
+  subtotal      Float // gross of line amounts incl. GST before bill discount
+  discount      Float     @default(0) // bill-level + line discounts
+  taxableValue  Float
+  cgst          Float     @default(0)
+  sgst          Float     @default(0)
+  igst          Float     @default(0)
+  taxTotal      Float
+  roundOff      Float     @default(0)
+  total         Float
+  paidAmount    Float     @default(0) // sum of payments (refunds are negative)
+  returnedAmount Float    @default(0) // value of goods returned
+  costTotal     Float     @default(0)
+  interState    Boolean   @default(false)
+  status        String    @default("PAID") // PAID | PARTIAL | UNPAID | CANCELLED
+  notes         String?
+  userId        Int?
+  jobCardId     Int?      @unique
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdAt     DateTime  @default(now())
+
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicle  Vehicle?     @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  jobCard  JobCard?     @relation(fields: [jobCardId], references: [id], onDelete: SetNull)
+  items    SaleItem[]
+  payments Payment[]
+  returns  SaleReturn[]
+
+  @@index([date])
+  @@index([status])
+}
+
+model SaleItem {
+  id            Int       @id @default(autoincrement())
+  saleId        Int
+  productId     Int? // null for service / labour lines
+  name          String
+  hsn           String?
+  qty           Float
+  unitPrice     Float // incl. GST
+  discount      Float     @default(0) // line discount amount
+  gstRate       Float
+  taxableValue  Float
+  taxAmount     Float
+  total         Float
+  costPrice     Float     @default(0) // per unit, excl. GST
+  returnedQty   Float     @default(0)
+  warrantyUntil DateTime?
+  sale          Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product       Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model Payment {
+  id         Int       @id @default(autoincrement())
+  saleId     Int?
+  customerId Int?
+  amount     Float // negative = refund
+  method     String // CASH | UPI | CARD | BANK | CHEQUE
+  reference  String?
+  date       DateTime  @default(now())
+  note       String?
+  userId     Int?
+  sale       Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+}
+
+model SaleReturn {
+  id           Int      @id @default(autoincrement())
+  number       String   @unique
+  saleId       Int
+  date         DateTime @default(now())
+  total        Float
+  refundMethod String // CASH | UPI | CARD | BANK | ADJUST_DUE
+  reason       String?
+  items        String // JSON: [{saleItemId,productId,name,qty,amount}]
+  userId       Int?
+  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model HeldBill {
+  id        Int      @id @default(autoincrement())
+  label     String
+  data      String // JSON cart
+  userId    Int?
+  createdAt DateTime @default(now())
+}
+
+// ───────────────────────────── Service / installation ─────────────────────────────
+
+model JobCard {
+  id           Int           @id @default(autoincrement())
+  number       String        @unique
+  customerId   Int
+  vehicleId    Int?
+  technicianId Int?
+  status       String        @default("RECEIVED") // RECEIVED | INSPECTION | IN_PROGRESS | COMPLETED | DELIVERED | CANCELLED
+  complaint    String
+  diagnosis    String?
+  odometer     Int?
+  labourCharge Float         @default(0)
+  estimate     Float         @default(0)
+  promisedAt   DateTime?
+  receivedAt   DateTime      @default(now())
+  completedAt  DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime      @default(now())
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  vehicle      Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  technician   User?         @relation("Technician", fields: [technicianId], references: [id], onDelete: SetNull)
+  parts        JobCardPart[]
+  sale         Sale?
+}
+
+model JobCardPart {
+  id        Int     @id @default(autoincrement())
+  jobCardId Int
+  productId Int
+  qty       Float
+  unitPrice Float // incl. GST
+  jobCard   JobCard @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// ───────────────────────────── Expenses & cash ─────────────────────────────
+
+model Expense {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @default(now())
+  category  String // RENT | ELECTRICITY | SALARY | TRANSPORT | MAINTENANCE | TEA_SNACKS | MARKETING | OTHER
+  amount    Float
+  method    String // CASH | UPI | CARD | BANK
+  paidTo    String?
+  note      String?
+  userId    Int?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+}
+
+model DayClose {
+  id          Int      @id @default(autoincrement())
+  date        String   @unique // YYYY-MM-DD
+  openingCash Float
+  cashIn      Float
+  cashOut     Float
+  expected    Float
+  counted     Float
+  difference  Float
+  note        String?
+  closedById  Int?
+  createdAt   DateTime @default(now())
+}
