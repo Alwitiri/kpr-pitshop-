@@ -12,7 +12,8 @@
     "seed:clean": "cross-env SEED_DEMO=0 tsx prisma/seed.ts",
     "setup": "prisma db push && tsx prisma/seed.ts",
     "postinstall": "prisma generate",
-    "start:render": "prisma db push --skip-generate && next start -p ${PORT:-3000}"
+    "migration:new": "node scripts/new-migration.mjs",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -41,9 +42,6 @@
     "@prisma/engines@6.19.3": true,
     "prisma@6.19.3": true,
     "esbuild@0.28.2": true
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "engines": {
     "node": ">=20.9"

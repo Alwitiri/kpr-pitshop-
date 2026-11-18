@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { login } from "@/actions/auth";
 import { ActionForm, Submit } from "@/components/forms";
 
 export const metadata = { title: "Login" };
 
 export default async function LoginPage() {
+  if ((await db.user.count()) === 0) redirect("/setup");
   if (await getSession()) redirect("/");
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-4">

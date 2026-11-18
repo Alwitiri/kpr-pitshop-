@@ -1,5 +1,6 @@
 // KPR Pitstop N Sportz – Business Management System
-// PostgreSQL (Render / Supabase / local). Set DATABASE_URL in .env.
+// SQLite – one data file on the shop PC, works fully offline.
+// Schema changes: edit this file, then run `npm run migration:new <name>`.
 
 
 generator client {
@@ -7,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 

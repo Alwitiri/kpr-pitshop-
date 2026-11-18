@@ -28,8 +28,8 @@ async function wipe() {
     "ProductFitment", "Product", "Vehicle", "Customer", "Supplier", "Category", "Brand",
     "Expense", "DayClose", "Attendance", "AuditLog", "User", "Counter", "ShopSettings",
   ];
-  // PostgreSQL: empty every table and reset id counters in one statement
-  await db.$executeRawUnsafe(`TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`);
+  for (const t of tables) await db.$executeRawUnsafe(`DELETE FROM "${t}"`);
+  await db.$executeRawUnsafe(`DELETE FROM sqlite_sequence`).catch(() => {});
 }
 
 async function next(name: string, prefix: string) {

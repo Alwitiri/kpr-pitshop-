@@ -20,7 +20,8 @@ export async function createSession(s: Session) {
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // Shop PCs and phones reach the app over plain http on the local network
+    secure: process.env.COOKIE_SECURE === "1",
     path: "/",
     maxAge: 60 * 60 * 12,
   });

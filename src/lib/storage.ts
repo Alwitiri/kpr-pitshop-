@@ -2,11 +2,11 @@ import "server-only";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { uploadDir } from "./paths";
 
-// Uploaded files (product images, supplier bills) are stored on disk under
-// ./uploads and served through /api/files/... (login required).
-// For cloud hosting swap this for Supabase Storage / S3.
-export const UPLOAD_ROOT = path.join(process.cwd(), "uploads");
+// Uploaded files (product images, supplier bills) are stored in the data
+// folder next to the database and served through /api/files/... (login required).
+export const UPLOAD_ROOT = uploadDir();
 
 const ALLOWED = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf"]);
 

@@ -44,3 +44,8 @@ prisma/*.db
 prisma/*.db-journal
 !.env.example
 .claude/
+dist/
+prisma/backups/
+prisma/uploads/
+prisma/*.db-wal
+prisma/*.db-shm
