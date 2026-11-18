@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { login } from "@/actions/auth";
 import { ActionForm, Submit } from "@/components/forms";
 
+// Must check the live database on every request (never pre-rendered at build time)
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Login" };
 
 export default async function LoginPage() {

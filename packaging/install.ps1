@@ -32,13 +32,19 @@ if ($LASTEXITCODE -ge 8) { throw "Copying files failed (robocopy code $LASTEXITC
 # 3. Shortcuts
 $shell = New-Object -ComObject WScript.Shell
 function New-Shortcut($path, $arguments, $name) {
-  $s = $shell.CreateShortcut($path)
-  $s.TargetPath = "$env:WINDIR\System32\wscript.exe"
-  $s.Arguments = "`"$program\KPR Pitstop.vbs`" $arguments".Trim()
-  $s.WorkingDirectory = $program
-  $s.IconLocation = "$program\kpr.ico,0"
-  $s.Description = $name
-  $s.Save()
+  try {
+    if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force }
+    $s = $shell.CreateShortcut($path)
+    $s.TargetPath = "$env:WINDIR\System32\wscript.exe"
+    $s.Arguments = "`"$program\KPR Pitstop.vbs`" $arguments".Trim()
+    $s.WorkingDirectory = $program
+    $s.IconLocation = "$program\kpr.ico,0"
+    $s.Description = $name
+    $s.Save()
+  } catch {
+    # Antivirus / Windows security sometimes blocks shortcut changes; the app still works without it
+    Write-Host "  Could not create shortcut: $path" -ForegroundColor Yellow
+  }
 }
 $desktop = [Environment]::GetFolderPath("Desktop")
 $startMenu = Join-Path ([Environment]::GetFolderPath("Programs")) "KPR Pitstop"

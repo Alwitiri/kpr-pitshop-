@@ -3,7 +3,7 @@
 //   dist/KPR-Pitstop-<version>.zip         (same, zipped)
 // Contents: "Install KPR Pitstop.cmd", install.ps1, uninstall.ps1, program/ (app + node.exe + launcher)
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
@@ -37,6 +37,25 @@ for (const f of [
 ]) {
   rmSync(path.join(app, f), { recursive: true, force: true });
 }
+// Turbopack links some packages via symlinks (e.g. .next/node_modules/@prisma/client-<hash>).
+// ZIP files and robocopy drop symlinks, so replace every link with a real copy of its target.
+let links = 0;
+(function materialize(dir) {
+  for (const entry of readdirSync(dir)) {
+    const p = path.join(dir, entry);
+    const st = lstatSync(p);
+    if (st.isSymbolicLink()) {
+      const target = realpathSync(p);
+      rmSync(p, { recursive: true, force: true });
+      cpSync(target, p, { recursive: true, dereference: true });
+      links++;
+      materialize(p);
+    } else if (st.isDirectory()) {
+      materialize(p);
+    }
+  }
+})(app);
+console.log(`   replaced ${links} symlinks with real folders`);
 const engine = execSync(`dir /s /b "${app}\\*query_engine*.node"`, { encoding: "utf8", shell: "cmd.exe" }).trim();
 if (!engine) throw new Error("Prisma query engine missing from standalone output");
 console.log("   prisma engine:", path.relative(app, engine.split(/\r?\n/)[0]));

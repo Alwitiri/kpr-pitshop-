@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { firstRunSetup } from "@/actions/setup";
 import { ActionForm, Submit } from "@/components/forms";
 
+// Must check the live database on every request (never pre-rendered at build time)
+export const dynamic = "force-dynamic";
+
 export const metadata = { title: "Welcome" };
 
 export default async function SetupPage() {
