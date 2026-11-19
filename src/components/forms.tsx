@@ -25,7 +25,21 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   onSuccess?: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(action, null);
+  // Catch failures (e.g. upload too large, server restarting) and show them in the form
+  // instead of letting them crash the page.
+  const safeAction = async (prev: Result, fd: FormData): Promise<Result> => {
+    try {
+      return await action(prev, fd);
+    } catch (e) {
+      const digest = e && typeof e === "object" && "digest" in e ? String((e as { digest: unknown }).digest) : "";
+      if (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_NOT_FOUND")) throw e; // normal navigation
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/exceeded|too large|413/i.test(msg)) return { error: "That file is too large to upload. Please choose a smaller file." };
+      if (/fetch|network|Failed to/i.test(msg)) return { error: "Could not reach the KPR server. Check that the app is running, then try again." };
+      return { error: "Something went wrong while saving. Please try again." };
+    }
+  };
+  const [state, formAction, pending] = useActionState(safeAction, null);
   const [, startTransition] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {

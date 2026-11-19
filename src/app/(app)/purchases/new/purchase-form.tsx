@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ActionForm, Submit } from "@/components/forms";
 import { ProductPicker, type PickProduct } from "@/components/product-picker";
+import { ImageInput } from "@/components/image-input";
 import { createPurchase } from "@/actions/purchases";
 import { money, round2, ymd } from "@/lib/format";
 
@@ -42,7 +43,7 @@ export function PurchaseForm({ products, suppliers, defaultSupplier }: { product
           </label>
           <label><span className="label">Supplier bill / invoice no.</span><input name="supplierBillNo" className="input" /></label>
           <label><span className="label">Bill date</span><input name="date" type="date" className="input" defaultValue={ymd()} /></label>
-          <label><span className="label">Upload supplier bill (photo/PDF)</span><input name="attachment" type="file" accept="image/*,application/pdf" className="input py-1.5" /></label>
+          <label><span className="label">Upload supplier bill (photo/PDF)</span><ImageInput name="attachment" mode="photo" accept="image/*,application/pdf" /></label>
         </div>
       </section>
 

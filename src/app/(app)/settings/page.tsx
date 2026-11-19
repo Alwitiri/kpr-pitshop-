@@ -2,6 +2,7 @@ import { requirePage } from "@/lib/auth";
 import { getSettings } from "@/lib/server-utils";
 import { PageHeader, Section } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/forms";
+import { ImageInput } from "@/components/image-input";
 import { saveSettings } from "@/actions/staff";
 import { makeBackup, restoreBackup } from "@/actions/backup";
 import { listBackups } from "@/lib/backup";
@@ -61,8 +62,8 @@ export default async function SettingsPage() {
               </p>
             </div>
             <ActionForm action={uploadLogo} resetOnSuccess className="mt-4 space-y-2">
-              <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" className="input py-1.5" required />
-              <p className="text-xs text-gray-500">PNG, JPG or WEBP, up to 2 MB. A square logo on a white or transparent background looks best.</p>
+              <ImageInput name="logo" mode="logo" required />
+              <p className="text-xs text-gray-500">PNG, JPG or WEBP – big images are resized automatically. A square logo on a white or transparent background looks best.</p>
               <Submit>{logo ? "Replace logo" : "Upload logo"}</Submit>
             </ActionForm>
             {logo && (

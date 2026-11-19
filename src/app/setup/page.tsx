@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { firstRunSetup } from "@/actions/setup";
 import { ActionForm, Submit } from "@/components/forms";
+import { ImageInput } from "@/components/image-input";
 
 // Must check the live database on every request (never pre-rendered at build time)
 export const dynamic = "force-dynamic";
@@ -25,8 +26,8 @@ export default async function SetupPage() {
               <label className="sm:col-span-2"><span className="label">Tagline (shown under the name)</span><input name="tagline" className="input" placeholder="e.g. Bike & Car Accessories" /></label>
               <label className="sm:col-span-2">
                 <span className="label">Company logo (optional)</span>
-                <input name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="input py-1.5" />
-                <span className="mt-1 block text-xs text-gray-400">Shown on the login screen, menu and bills. PNG/JPG up to 2 MB. You can add or change it later in Settings.</span>
+                <ImageInput name="logo" mode="logo" />
+                <span className="mt-1 block text-xs text-gray-400">Shown on the login screen, menu and bills. Any PNG/JPG/WEBP – big images are resized automatically. You can change it later in Settings.</span>
               </label>
               <label><span className="label">Shop phone</span><input name="phone" className="input" /></label>
               <label><span className="label">GSTIN</span><input name="gstin" className="input uppercase" maxLength={15} /></label>

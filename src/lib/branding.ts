@@ -18,7 +18,7 @@ export async function logoUrl() {
 
 export async function saveLogo(file: File) {
   if (!file || typeof file === "string" || file.size === 0) throw new Error("Choose a logo image.");
-  if (file.size > 2 * 1024 * 1024) throw new Error("Logo must be smaller than 2 MB.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Logo must be smaller than 10 MB.");
   const ext = path.extname(file.name).toLowerCase();
   if (!TYPES[ext]) throw new Error("Use a PNG, JPG or WEBP image.");
   const buf = Buffer.from(await file.arrayBuffer());

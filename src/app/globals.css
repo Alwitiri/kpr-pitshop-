@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Don't scan data / output folders for class names: the dev database (and its
+   locked -shm/-wal files), backups, uploads and packaged builds live there. */
+@source not "../../prisma";
+@source not "../../dist";
+@source not "../../uploads";
+
 @theme inline {
   --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Cascadia Mono", Consolas, "Courier New", monospace;

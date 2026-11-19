@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { ActionForm, Submit } from "./forms";
 import { Barcode } from "./barcode";
+import { ImageInput } from "./image-input";
 import { newBarcode, saveProduct } from "@/actions/products";
 import { isValidEan13 } from "@/lib/barcode";
 
@@ -224,7 +225,7 @@ export function ProductForm({
           </label>
           <label>
             <span className="label">Product image</span>
-            <input name="image" type="file" accept="image/*" className="input py-1.5" />
+            <ImageInput name="image" mode="photo" />
           </label>
         </div>
         <label className="mt-4 block">
