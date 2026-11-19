@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/server-utils";
 import { amountInWords, fmtDate, fmtDateTime, qty } from "@/lib/format";
 import { gstSummary } from "@/lib/calc";
 import { AutoPrint } from "./auto-print";
+import { Barcode } from "@/components/barcode";
 
 export const metadata = { title: "Invoice" };
 
@@ -81,6 +82,10 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
         )}
         <div className="my-1 border-t border-dashed border-black" />
         <div className="text-center text-[10px]">{shop.invoiceFooter}</div>
+        <div className="mt-1 flex justify-center">
+          <Barcode value={sale.invoiceNo} height={34} width={1.3} fontSize={10} />
+        </div>
+        <div className="text-center text-[9px]">Keep this bill – scan it for returns / exchange</div>
         <div className="mt-1 text-center font-bold">Thank you! Visit again 🏍️</div>
       </div>
     );
@@ -102,6 +107,9 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
         </div>
         <div className="text-right">
           <div className="text-xl font-bold">{sale.status === "CANCELLED" ? "CANCELLED – " : ""}TAX INVOICE</div>
+          <div className="flex justify-end">
+            <Barcode value={sale.invoiceNo} height={32} width={1.2} fontSize={0} displayValue={false} />
+          </div>
           <div className="mt-2">Invoice No: <b>{sale.invoiceNo}</b></div>
           <div>Date: {fmtDateTime(sale.date)}</div>
           <div>Place of supply: {sale.interState ? "Outside state (IGST)" : `${shop.stateName} (${shop.stateCode})`}</div>

@@ -25,7 +25,13 @@ export default async function PurchasePage({ params }: { params: Promise<{ id: s
         title={`Purchase ${p.number}`}
         subtitle={<>{fmtDate(p.date)} · <Link className="link" href={`/suppliers/${p.supplierId}`}>{p.supplier.name}</Link>{p.supplierBillNo ? ` · Bill ${p.supplierBillNo}` : ""}</>}
         back="/purchases"
-        actions={<><PrintButton />{p.attachmentUrl && <a className="btn-outline" href={p.attachmentUrl} target="_blank">View supplier bill</a>}</>}
+        actions={
+          <>
+            <Link className="btn-primary" href={`/products/labels?purchase=${p.id}`}>Print barcode stickers for these items</Link>
+            <PrintButton />
+            {p.attachmentUrl && <a className="btn-outline" href={p.attachmentUrl} target="_blank">View supplier bill</a>}
+          </>
+        }
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
         <div className="space-y-5">

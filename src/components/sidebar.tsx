@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { QuickFind } from "./scan-listener";
 
 export type NavItem = { href: string; label: string; icon: string };
 
@@ -60,6 +61,7 @@ export function Sidebar({
             <div className="text-[11px] text-gray-500">Business Manager</div>
           </div>
         </div>
+        <QuickFind />
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
           {items.map((it) => (
             <Link

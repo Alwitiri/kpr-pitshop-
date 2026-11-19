@@ -4,6 +4,7 @@ import { qty } from "@/lib/format";
 import { FilterBar, PageHeader, TableWrap } from "@/components/ui";
 import { ActionForm, PrintButton, Submit } from "@/components/forms";
 import { saveStockCheck } from "@/actions/inventory";
+import { ScanCount } from "./scan-count";
 
 export const metadata = { title: "Physical stock check" };
 
@@ -18,8 +19,13 @@ export default async function StockCheckPage({ searchParams }: { searchParams: P
       ...(sp.location ? { location: { contains: sp.location } } : {}),
     },
     orderBy: [{ location: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, sku: true, stock: true, location: true, size: true, color: true, unit: true },
+    select: { id: true, name: true, sku: true, barcode: true, stock: true, location: true, size: true, color: true, unit: true },
   });
+  const codes: Record<string, number> = {};
+  for (const p of products) {
+    codes[p.sku.toLowerCase()] = p.id;
+    if (p.barcode) codes[p.barcode.toLowerCase()] = p.id;
+  }
   return (
     <>
       <PageHeader
@@ -38,6 +44,7 @@ export default async function StockCheckPage({ searchParams }: { searchParams: P
         </label>
         <label><span className="label">Rack / location</span><input name="location" defaultValue={sp.location} className="input" placeholder="Rack A" /></label>
       </FilterBar>
+      <ScanCount codes={codes} />
       <ActionForm action={saveStockCheck}>
         <div className="card">
           <TableWrap>

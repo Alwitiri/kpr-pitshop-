@@ -1,5 +1,6 @@
 import "server-only";
 import { db, type Tx } from "./db";
+import { makeStoreEan13 } from "./barcode";
 
 /** Atomic sequential numbers: KPR-00001, PO-00001, ... */
 export async function nextNumber(tx: Tx, name: string, prefix: string, pad = 5) {
@@ -9,6 +10,25 @@ export async function nextNumber(tx: Tx, name: string, prefix: string, pad = 5) 
     update: { value: { increment: 1 } },
   });
   return `${prefix}-${String(c.value).padStart(pad, "0")}`;
+}
+
+/** Next unused item code KPR-0001… (skips codes already used, e.g. from an Excel import). */
+export async function generateSku(tx: Tx) {
+  for (;;) {
+    const sku = await nextNumber(tx, "sku", "KPR", 4);
+    const taken = await tx.product.findUnique({ where: { sku }, select: { id: true } });
+    if (!taken) return sku;
+  }
+}
+
+/** Next unused in-store EAN-13 barcode (21xxxxxxxxxxC). */
+export async function generateBarcode(tx: Tx) {
+  for (;;) {
+    const c = await tx.counter.upsert({ where: { name: "barcode" }, create: { name: "barcode", value: 1 }, update: { value: { increment: 1 } } });
+    const code = makeStoreEan13(c.value);
+    const taken = await tx.product.findUnique({ where: { barcode: code }, select: { id: true } });
+    if (!taken) return code;
+  }
 }
 
 /** Change stock and write the ledger entry in the same transaction. */

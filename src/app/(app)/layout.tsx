@@ -3,6 +3,7 @@ import { can, type Module } from "@/lib/roles";
 import { getSettings } from "@/lib/server-utils";
 import { logout } from "@/actions/auth";
 import { Sidebar, type NavItem } from "@/components/sidebar";
+import { ScanListener } from "@/components/scan-listener";
 
 const NAV: (NavItem & { module: Module })[] = [
   { href: "/", label: "Dashboard", icon: "dashboard", module: "dashboard" },
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <Sidebar items={items} user={{ name: s.name, role: s.role }} logoutAction={logout} shopName={settings.shopName} />
+      <ScanListener canProducts={can(s.role, "products")} canSales={can(s.role, "sales")} />
       <main className="lg:pl-60 print:pl-0">
         <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:py-7 print:max-w-none print:p-0">{children}</div>
       </main>

@@ -32,6 +32,24 @@ Nothing else is needed on the shop PC: Node.js is bundled, and the window uses M
 - **Manual (owner only):** Settings → *Backups* has *Back up now*, download (to save on a pen drive), and *Restore*. Restore saves a safety copy of the current data first.
 - **Advice for the shop owner:** copy a backup to a pen drive every week, because a dead hard disk takes the backups with it.
 
+### Barcodes & scanner
+
+Any USB or Bluetooth barcode scanner in "keyboard" mode works with no setup. Most scanners come in this mode.
+
+| Where | What scanning does |
+|---|---|
+| **New / edit product** | Scan the maker's barcode into the Barcode box. No barcode? Click **Generate**, or leave it empty and a shop EAN-13 code (`21…`) is created on save. |
+| **After saving a product** | A **Print N stickers** button prints one label for each piece in stock. |
+| **Products → Print barcode stickers** | Pick the sticker type: thermal rolls 50×25 / 38×25 / 50×30 mm, or A4 sheets with 65 or 24 per sheet. Choose whether to show price/MRP and the shop name. Set the quantity per product, or scan an item to add one more sticker. |
+| **Purchase → Print barcode stickers for these items** | Labels for everything just received, with the quantity set to the quantity received. |
+| **POS billing** | Scan an item to add it to the bill; scan again to increase the quantity. An unknown code offers **Add as new product**. |
+| **New purchase** | Scan an item to add it to the purchase. Unknown codes can be added as new products. |
+| **Physical stock check** | Scan every piece on the shelf, and the counted quantity goes up by one per scan. |
+| **Anywhere else** | Scanning a product opens it (counter staff instead see its price and stock). Scanning the barcode on a printed bill opens that bill for returns or reprints. |
+| **Sidebar "Scan / find"** | Type or scan a barcode or bill number. |
+
+Printed bills (80 mm and A4) carry the invoice number as a barcode.
+
 ## Development
 
 ```bash

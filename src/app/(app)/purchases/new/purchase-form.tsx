@@ -14,6 +14,7 @@ export function PurchaseForm({ products, suppliers, defaultSupplier }: { product
   const [other, setOther] = useState(0);
   const [disc, setDisc] = useState(0);
   const [paid, setPaid] = useState(0);
+  const [notFound, setNotFound] = useState<string | null>(null);
 
   const add = (p: PickProduct) => {
     const ex = lines.findIndex((l) => l.productId === p.id);
@@ -47,7 +48,18 @@ export function PurchaseForm({ products, suppliers, defaultSupplier }: { product
 
       <section className="card">
         <div className="border-b border-gray-100 p-4">
-          <ProductPicker products={products} onPick={add} placeholder="Search or scan product to add…" />
+          <ProductPicker products={products} onPick={add} onNotFound={setNotFound} placeholder="Search or scan product to add…" />
+          {notFound && (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span>
+                New item? Barcode <b className="font-mono">{notFound}</b> is not in the system. Add it (opens a new tab), then reload this page.
+              </span>
+              <span className="flex gap-2">
+                <a className="btn-dark btn-sm" href={`/products/new?barcode=${encodeURIComponent(notFound)}`} target="_blank">Add product</a>
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setNotFound(null)}>Dismiss</button>
+              </span>
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="table">

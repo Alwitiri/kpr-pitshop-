@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { pickerProducts } from "@/lib/queries";
 import { getSettings } from "@/lib/server-utils";
 import { PosScreen, type PosPreload } from "./pos-screen";
@@ -31,5 +32,13 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     }
   }
 
-  return <PosScreen products={products} canEditPrice={s.role === "OWNER" || s.role === "MANAGER"} preload={preload} shopState={settings.stateName} />;
+  return (
+    <PosScreen
+      products={products}
+      canEditPrice={s.role === "OWNER" || s.role === "MANAGER"}
+      canAddProduct={can(s.role, "products")}
+      preload={preload}
+      shopState={settings.stateName}
+    />
+  );
 }

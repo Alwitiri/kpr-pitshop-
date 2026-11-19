@@ -20,6 +20,8 @@ console.log("1/6 Icon");
 run("node scripts/make-icon.mjs");
 
 console.log("2/6 Production build");
+// Start from a clean build folder: leftover links from earlier builds / dev runs can't be overwritten on Windows
+rmSync(path.join(root, ".next"), { recursive: true, force: true });
 run("npx prisma generate");
 run("npx next build");
 

@@ -8,6 +8,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { calcBill, saleStatus } from "../src/lib/calc";
+import { ean13CheckDigit } from "../src/lib/barcode";
 
 const db = new PrismaClient();
 const DEMO = process.env.SEED_DEMO !== "0";
@@ -132,7 +133,7 @@ async function main() {
     const sku = `KPR-${String(i).padStart(4, "0")}`;
     const row = await db.product.create({
       data: {
-        name: p.name, sku, barcode: `890${String(100000000 + i)}`, categoryId: cats[p.cat], brandId: brands[p.brand], supplierId: p.sup,
+        name: p.name, sku, barcode: (() => { const f = `8901000${String(i).padStart(5, "0")}`; return f + ean13CheckDigit(f); })(), categoryId: cats[p.cat], brandId: brands[p.brand], supplierId: p.sup,
         purchasePrice: p.cost, sellingPrice: p.sell, mrp: p.mrp, gstRate: p.gst, stock: p.stock, minStock: p.min, warrantyMonths: p.war ?? 0,
         hsn: p.hsn, size: p.size, color: p.color, variantGroup: p.group, location: `Rack ${String.fromCharCode(65 + (i % 6))}${(i % 4) + 1}`,
         fitments: p.fit ? { create: p.fit.map(([make, model, type]) => ({ make, model, vehicleType: type ?? "BIKE" })) } : undefined,

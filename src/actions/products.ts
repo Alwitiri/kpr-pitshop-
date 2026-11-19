@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAction } from "@/lib/auth";
-import { audit, bool, errMsg, moveStock, nextNumber, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
+import { audit, bool, errMsg, generateBarcode, generateSku, moveStock, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
+import { cleanCode } from "@/lib/barcode";
 import { saveUpload } from "@/lib/storage";
 
 type FitmentIn = { vehicleType: string; make: string; model?: string; yearFrom?: number | null; yearTo?: number | null };
@@ -30,7 +31,7 @@ export async function saveProduct(_: ActionResult, fd: FormData): Promise<Action
 
     const data = {
       name,
-      barcode: optStr(fd, "barcode"),
+      barcode: cleanCode(str(fd, "barcode")) || null,
       categoryId: optInt(fd, "categoryId"),
       brandId: optInt(fd, "brandId"),
       supplierId: optInt(fd, "supplierId"),
@@ -61,7 +62,9 @@ export async function saveProduct(_: ActionResult, fd: FormData): Promise<Action
     if (id) {
       await db.$transaction(async (tx) => {
         const sku = str(fd, "sku");
-        await tx.product.update({ where: { id: id! }, data: { ...data, ...(sku ? { sku } : {}) } });
+        // Every product gets a scannable barcode: generate one if the field was left empty
+        const barcode = data.barcode ?? (await generateBarcode(tx));
+        await tx.product.update({ where: { id: id! }, data: { ...data, barcode, ...(sku ? { sku } : {}) } });
         await tx.productFitment.deleteMany({ where: { productId: id! } });
         if (fitCreate.length) await tx.productFitment.createMany({ data: fitCreate.map((f) => ({ ...f, productId: id! })) });
       });
@@ -69,8 +72,9 @@ export async function saveProduct(_: ActionResult, fd: FormData): Promise<Action
     } else {
       const opening = num(fd, "openingStock");
       const created = await db.$transaction(async (tx) => {
-        const sku = str(fd, "sku") || (await nextNumber(tx, "sku", "KPR", 4));
-        const p = await tx.product.create({ data: { ...data, sku, stock: 0, fitments: { create: fitCreate } } });
+        const sku = str(fd, "sku") || (await generateSku(tx));
+        const barcode = data.barcode ?? (await generateBarcode(tx));
+        const p = await tx.product.create({ data: { ...data, barcode, sku, stock: 0, fitments: { create: fitCreate } } });
         if (opening > 0) await moveStock(tx, { productId: p.id, qty: opening, type: "OPENING", note: "Opening stock", userId: s.uid });
         return p;
       });
@@ -83,6 +87,30 @@ export async function saveProduct(_: ActionResult, fd: FormData): Promise<Action
   revalidatePath("/products");
   if (fd.get("_new")) redirect(`/products/${id}?saved=1`);
   return { ok: "Product saved." };
+}
+
+/** Give every product that has no barcode a new in-store EAN-13 code. */
+export async function generateMissingBarcodes(_: ActionResult): Promise<ActionResult> {
+  try {
+    const s = await requireAction("products");
+    const missing = await db.product.findMany({ where: { OR: [{ barcode: null }, { barcode: "" }] }, select: { id: true } });
+    for (const p of missing) {
+      await db.$transaction(async (tx) => {
+        await tx.product.update({ where: { id: p.id }, data: { barcode: await generateBarcode(tx) } });
+      });
+    }
+    await audit(s.uid, "BARCODES_GENERATED", "Product", null, `${missing.length} products`);
+    revalidatePath("/products");
+    return { ok: `Barcodes created for ${missing.length} products. You can now print their labels.` };
+  } catch (e) {
+    return { error: errMsg(e) };
+  }
+}
+
+/** Reserve a fresh barcode for the product form's "Generate" button. */
+export async function newBarcode(): Promise<string> {
+  await requireAction("products");
+  return db.$transaction((tx) => generateBarcode(tx));
 }
 
 export async function deleteProduct(fd: FormData) {
@@ -203,7 +231,7 @@ export async function importProducts(_: ActionResult, fd: FormData): Promise<Act
           };
           const data = {
             name, categoryId, brandId,
-            barcode: col(row, "barcode") || null,
+            barcode: cleanCode(col(row, "barcode")) || null,
             hsn: col(row, "hsn") || null,
             unit: col(row, "unit") || "PCS",
             size: col(row, "size") || null,
@@ -222,8 +250,8 @@ export async function importProducts(_: ActionResult, fd: FormData): Promise<Act
             await tx.product.update({ where: { id: existing.id }, data });
             updated++;
           } else {
-            const sku = skuIn || (await nextNumber(tx, "sku", "KPR", 4));
-            const p = await tx.product.create({ data: { ...data, sku } });
+            const sku = skuIn || (await generateSku(tx));
+            const p = await tx.product.create({ data: { ...data, sku, barcode: data.barcode ?? (await generateBarcode(tx)) } });
             const st = n("stock");
             if (st > 0) await moveStock(tx, { productId: p.id, qty: st, type: "OPENING", note: "Imported opening stock", userId: s.uid });
             created++;

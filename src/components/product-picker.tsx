@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cleanCode } from "@/lib/barcode";
 
 export type PickProduct = {
   id: number;
@@ -25,9 +26,12 @@ export function ProductPicker({
   autoFocus,
   name,
   defaultId,
+  onNotFound,
 }: {
   products: PickProduct[];
   onPick?: (p: PickProduct) => void;
+  /** Called when Enter (or a scanner) gives a code that matches no product. */
+  onNotFound?: (code: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
   name?: string; // when set, renders a hidden input with the chosen id (for plain forms)
@@ -39,8 +43,8 @@ export function ProductPicker({
   const [chosen, setChosen] = useState<PickProduct | null>(() => products.find((p) => p.id === defaultId) ?? null);
   const box = useRef<HTMLDivElement>(null);
 
-  const results = useMemo(() => {
-    const t = q.trim().toLowerCase();
+  const search = (raw: string) => {
+    const t = raw.trim().toLowerCase();
     if (!t) return [];
     const words = t.split(/\s+/);
     return products
@@ -49,7 +53,9 @@ export function ProductPicker({
         return words.every((w) => hay.includes(w));
       })
       .slice(0, 12);
-  }, [q, products]);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const results = useMemo(() => search(q), [q, products]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -84,10 +90,18 @@ export function ProductPicker({
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            const t = q.trim().toLowerCase();
+            // Read the box directly: a scanner types + presses Enter faster than React re-renders
+            const raw = e.currentTarget.value;
+            const t = cleanCode(raw).toLowerCase();
+            if (!t) return;
             const exact = products.find((p) => p.barcode?.toLowerCase() === t || p.sku.toLowerCase() === t);
             if (exact) return pick(exact);
-            if (results[active]) pick(results[active]);
+            const fresh = raw === q ? results : search(raw);
+            if (fresh[active] ?? fresh[0]) return pick(fresh[active] ?? fresh[0]);
+            // Nothing matched – most likely a barcode that is not in the system yet
+            onNotFound?.(cleanCode(raw));
+            setQ("");
+            setOpen(false);
           } else if (e.key === "ArrowDown") {
             e.preventDefault();
             setActive((a) => Math.min(a + 1, results.length - 1));

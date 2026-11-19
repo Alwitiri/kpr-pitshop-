@@ -16,7 +16,7 @@ export type PosPreload = { jobCardId: number; jobNumber: string; customer: Custo
 
 const METHODS = ["CASH", "UPI", "CARD", "BANK"];
 
-export function PosScreen({ products, canEditPrice, preload, shopState }: { products: PickProduct[]; canEditPrice: boolean; preload: PosPreload | null; shopState: string }) {
+export function PosScreen({ products, canEditPrice, canAddProduct, preload, shopState }: { products: PickProduct[]; canEditPrice: boolean; canAddProduct: boolean; preload: PosPreload | null; shopState: string }) {
   const [lines, setLines] = useState<Line[]>(preload?.lines ?? []);
   const [billDiscount, setBillDiscount] = useState(0);
   const [interState, setInterState] = useState(false);
@@ -33,6 +33,7 @@ export function PosScreen({ products, canEditPrice, preload, shopState }: { prod
   const [pending, start] = useTransition();
   const [jobCardId, setJobCardId] = useState<number | null>(preload?.jobCardId ?? null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [notFound, setNotFound] = useState<string | null>(null);
 
   const bill = useMemo(() => calcBill(lines, billDiscount, interState), [lines, billDiscount, interState]);
   const paid = round2(pays.reduce((a, p) => a + (p.amount || 0), 0));
@@ -61,12 +62,31 @@ export function PosScreen({ products, canEditPrice, preload, shopState }: { prod
 
   const add = (p: PickProduct) => {
     setError("");
-    const inCart = lines.filter((l) => l.productId === p.id).reduce((a, l) => a + l.qty, 0);
-    if (inCart + 1 > p.stock) setError(`Only ${p.stock} of "${p.name}" in stock.`);
-    const ix = lines.findIndex((l) => l.productId === p.id);
-    if (ix >= 0) setLines(lines.map((l, i) => (i === ix ? { ...l, qty: l.qty + 1 } : l)));
-    else setLines([...lines, { productId: p.id, name: p.name + (p.size ? ` (${p.size})` : ""), hsn: p.hsn, qty: 1, unitPrice: p.sellingPrice, discount: 0, gstRate: p.gstRate, stock: p.stock }]);
+    setNotFound(null);
+    // functional update: several fast scans in a row must all count
+    setLines((cur) => {
+      const inCart = cur.filter((l) => l.productId === p.id).reduce((a, l) => a + l.qty, 0);
+      if (inCart + 1 > p.stock) setError(`Only ${p.stock} of "${p.name}" in stock.`);
+      const ix = cur.findIndex((l) => l.productId === p.id);
+      if (ix >= 0) return cur.map((l, i) => (i === ix ? { ...l, qty: l.qty + 1 } : l));
+      return [...cur, { productId: p.id, name: p.name + (p.size ? ` (${p.size})` : ""), hsn: p.hsn, qty: 1, unitPrice: p.sellingPrice, discount: 0, gstRate: p.gstRate, stock: p.stock }];
+    });
+    // ready for the next scan
+    setTimeout(() => searchRef.current?.querySelector("input")?.focus(), 0);
   };
+
+  // A scan while the cursor is outside the search box (e.g. after clicking a button) still adds the item
+  useEffect(() => {
+    const onScan = (e: Event) => {
+      const code = String((e as CustomEvent<string>).detail).trim().toLowerCase();
+      const p = products.find((x) => x.barcode?.toLowerCase() === code || x.sku.toLowerCase() === code);
+      e.preventDefault();
+      if (p) add(p);
+      else setNotFound(code);
+    };
+    window.addEventListener("kpr-scan", onScan);
+    return () => window.removeEventListener("kpr-scan", onScan);
+  });
   const upd = (i: number, patch: Partial<Line>) => setLines(lines.map((l, j) => (j === i ? { ...l, ...patch } : l)));
 
   const reset = () => {
@@ -162,7 +182,18 @@ export function PosScreen({ products, canEditPrice, preload, shopState }: { prod
           </div>
         )}
         <div ref={searchRef} className="mb-3">
-          <ProductPicker products={products} onPick={add} autoFocus placeholder="Scan barcode or search product (F2)…" />
+          <ProductPicker products={products} onPick={add} onNotFound={(c) => setNotFound(c)} autoFocus placeholder="Scan barcode or search product (F2)…" />
+          {notFound && (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span>No product with barcode / code <b className="font-mono">{notFound}</b>.</span>
+              <span className="flex gap-2">
+                {canAddProduct && (
+                  <a className="btn-dark btn-sm" href={`/products/new?barcode=${encodeURIComponent(notFound)}`} target="_blank">Add as new product</a>
+                )}
+                <button className="btn-ghost btn-sm" onClick={() => setNotFound(null)}>Dismiss</button>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="card flex-1 overflow-hidden">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { db, like } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
@@ -12,6 +13,11 @@ const PER = 50;
 export default async function SalesPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requirePage("sales");
   const sp = await searchParams;
+  // Scanning the barcode on a printed bill into the search box jumps straight to that bill
+  if (sp.q) {
+    const exact = await db.sale.findUnique({ where: { invoiceNo: sp.q.trim().toUpperCase() }, select: { id: true } });
+    if (exact) redirect(`/sales/${exact.id}`);
+  }
   const page = Math.max(1, Number(sp.page) || 1);
   const from = sp.from ?? (sp.q || sp.status ? "" : ymd(new Date(Date.now() - 6 * 864e5)));
   const to = sp.to ?? "";
@@ -48,7 +54,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         <Stat label="Outstanding" value={money(Math.max(0, net - (agg._sum.paidAmount ?? 0)))} tone="warn" />
       </div>
       <FilterBar>
-        <label className="min-w-48 flex-1"><span className="label">Search</span><input name="q" defaultValue={sp.q} className="input" placeholder="Invoice no., customer, phone" /></label>
+        <label className="min-w-48 flex-1"><span className="label">Search</span><input name="q" defaultValue={sp.q} className="input" placeholder="Invoice no. (or scan bill), customer, phone" /></label>
         <label><span className="label">From</span><input type="date" name="from" defaultValue={from} className="input" /></label>
         <label><span className="label">To</span><input type="date" name="to" defaultValue={to} className="input" /></label>
         <label>

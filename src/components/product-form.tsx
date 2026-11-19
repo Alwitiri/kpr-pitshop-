@@ -1,8 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { ActionForm, Submit } from "./forms";
-import { saveProduct } from "@/actions/products";
+import { Barcode } from "./barcode";
+import { newBarcode, saveProduct } from "@/actions/products";
+import { isValidEan13 } from "@/lib/barcode";
+
+/** Barcode input: scan the maker's barcode, type one, or generate a shop barcode. */
+function BarcodeField({ initial }: { initial: string }) {
+  const [code, setCode] = useState(initial);
+  const [pending, start] = useTransition();
+  return (
+    <div className="sm:col-span-2 lg:col-span-4">
+      <span className="label">Barcode</span>
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-60 flex-1">
+          <div className="flex gap-2">
+            <input
+              name="barcode"
+              className="input font-mono"
+              value={code}
+              onChange={(e) => setCode(e.target.value.trim())}
+              // A scanner presses Enter after the code: don't submit the whole form
+              onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+              placeholder="Scan the barcode on the item, or click Generate"
+            />
+            <button type="button" className="btn-outline" disabled={pending} onClick={() => start(async () => setCode(await newBarcode()))}>
+              {pending ? "…" : "Generate"}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Item already has a barcode from the company? Click in the box and scan it. No barcode? Leave empty or click
+            Generate – a shop barcode is created automatically when you save.
+          </p>
+          {code && /^\d{13}$/.test(code) && !isValidEan13(code) && (
+            <p className="mt-1 text-xs text-amber-700">This 13-digit code has a wrong check digit – it will print as Code 128.</p>
+          )}
+        </div>
+        {code && (
+          <div className="rounded-lg border bg-white px-2">
+            <Barcode value={code} height={40} width={1.4} fontSize={11} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 type Opt = { id: number; name: string };
 type Fit = { vehicleType: string; make: string; model?: string | null; yearFrom?: number | null; yearTo?: number | null };
@@ -12,6 +55,7 @@ export type ProductFormData = {
   sku?: string;
   barcode?: string | null;
   categoryId?: number | null;
+  stock?: number;
   brandId?: number | null;
   supplierId?: number | null;
   variantGroup?: string | null;
@@ -71,10 +115,7 @@ export function ProductForm({
             <span className="label">SKU / Item code</span>
             <input name="sku" className="input" defaultValue={p?.sku} placeholder={isNew ? "Auto (KPR-0001)" : ""} />
           </label>
-          <label>
-            <span className="label">Barcode</span>
-            <input name="barcode" className="input" defaultValue={p?.barcode ?? ""} placeholder="Scan or type; blank = use SKU" />
-          </label>
+          <BarcodeField initial={p?.barcode ?? ""} />
           <label>
             <span className="label">Category</span>
             <select name="categoryId" className="input" defaultValue={p?.categoryId ?? ""}>

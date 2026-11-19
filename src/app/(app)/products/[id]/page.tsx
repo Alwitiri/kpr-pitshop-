@@ -42,7 +42,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
         actions={
           <>
             <Link href={`/inventory/adjust?product=${p.id}`} className="btn-outline">Adjust stock</Link>
-            <Link href={`/products/labels?ids=${p.id}`} className="btn-outline">Print label</Link>
+            <Link href={`/products/labels?ids=${p.id}&qty=${Math.max(1, Math.round(p.stock))}`} className="btn-outline">Print barcode stickers</Link>
             <form action={deleteProduct}>
               <input type="hidden" name="id" value={p.id} />
               <Submit className="btn-danger" confirm="Delete this product? If it has sales/purchases it will be deactivated instead.">Delete</Submit>
@@ -50,7 +50,16 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           </>
         }
       />
-      {sp.saved && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Product created.</div>}
+      {sp.saved && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span>
+            <b>Product created</b> with barcode <span className="font-mono">{p.barcode}</span>. Stick a label on each piece so it can be scanned at billing.
+          </span>
+          <Link href={`/products/labels?ids=${p.id}&qty=${Math.max(1, Math.round(p.stock))}`} className="btn-primary btn-sm">
+            Print {Math.max(1, Math.round(p.stock))} stickers
+          </Link>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="In stock" value={<Badge status={st}>{qty(p.stock)} {p.unit.toLowerCase()}</Badge>} hint={`Alert below ${qty(p.minStock)}`} />
@@ -71,6 +80,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
           <Section title="Barcode">
             <div className="flex flex-col items-center gap-3">
               <Barcode value={p.barcode || p.sku} />
+              {!p.barcode && <p className="text-center text-xs text-amber-700">No barcode yet – the SKU is shown. Save the product to get a scannable barcode.</p>}
               {p.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={p.imageUrl} alt={p.name} className="max-h-48 rounded-lg border object-contain" />

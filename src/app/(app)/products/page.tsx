@@ -54,7 +54,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 ...products.map((p) => [p.name, p.sku, p.barcode, p.category?.name, p.brand?.name, p.size, p.color, p.hsn, profit ? p.purchasePrice : "", p.sellingPrice, p.mrp, p.gstRate, p.stock, p.minStock, p.warrantyMonths, p.location]),
               ]}
             />
-            <Link href="/products/labels" className="btn-outline">Barcode labels</Link>
+            <Link href="/products/labels" className="btn-outline">Print barcode stickers</Link>
             <Link href="/products/import" className="btn-outline">Import</Link>
             <Link href="/products/masters" className="btn-outline">Categories & brands</Link>
             <Link href="/products/new" className="btn-primary">+ New product</Link>
@@ -111,7 +111,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <thead>
               <tr>
                 <th>Product</th>
-                <th>SKU</th>
+                <th>SKU / Barcode</th>
                 <th>Category / Brand</th>
                 <th>Fits</th>
                 {profit && <th className="text-right">Cost</th>}
@@ -129,7 +129,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       <Link href={`/products/${p.id}`} className="link">{p.name}</Link>
                       {(p.size || p.color) && <div className="text-xs text-gray-500">{[p.size, p.color].filter(Boolean).join(" · ")}</div>}
                     </td>
-                    <td className="font-mono text-xs">{p.sku}</td>
+                    <td className="font-mono text-xs">{p.sku}<div className={p.barcode ? "text-gray-500" : "text-amber-600"}>{p.barcode ?? "no barcode"}</div></td>
                     <td className="text-xs">
                       {p.category?.name ?? "—"}
                       <div className="text-gray-500">{p.brand?.name}</div>
