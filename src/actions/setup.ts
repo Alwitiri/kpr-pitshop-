@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { audit, str, type ActionResult } from "@/lib/server-utils";
+import { saveLogo } from "@/lib/branding";
 
 const DEFAULT_CATEGORIES: [string, string][] = [
   ["Helmets", "BIKE"], ["Riding Gear", "BIKE"], ["Bike Lights & Electricals", "BIKE"], ["Bike Body Parts", "BIKE"],
@@ -24,19 +25,31 @@ export async function firstRunSetup(_: ActionResult, fd: FormData): Promise<Acti
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) return { error: "Username: 3–30 letters/numbers, no spaces." };
   if (password.length < 6) return { error: "Password must be at least 6 characters." };
   if (password !== str(fd, "confirm")) return { error: "Passwords do not match." };
+  const logo = fd.get("logo") as File | null;
+  const hasLogo = !!logo && typeof logo !== "string" && logo.size > 0;
 
+  const shop = {
+    shopName,
+    tagline: str(fd, "tagline") || null,
+    phone: str(fd, "phone") || null,
+    address: str(fd, "address") || null,
+    gstin: str(fd, "gstin").toUpperCase() || null,
+  };
   const user = await db.$transaction(async (tx) => {
-    await tx.shopSettings.upsert({
-      where: { id: 1 },
-      create: { id: 1, shopName, phone: str(fd, "phone") || null, address: str(fd, "address") || null, gstin: str(fd, "gstin").toUpperCase() || null },
-      update: { shopName, phone: str(fd, "phone") || null, address: str(fd, "address") || null, gstin: str(fd, "gstin").toUpperCase() || null },
-    });
+    await tx.shopSettings.upsert({ where: { id: 1 }, create: { id: 1, ...shop }, update: shop });
     if ((await tx.category.count()) === 0 && fd.get("categories")) {
       await tx.category.createMany({ data: DEFAULT_CATEGORIES.map(([n, type]) => ({ name: n, type })) });
     }
     return tx.user.create({ data: { name, username, role: "OWNER", passwordHash: await bcrypt.hash(password, 10) } });
   });
   await audit(user.id, "FIRST_RUN_SETUP", "System", null, shopName);
+  if (hasLogo) {
+    try {
+      await saveLogo(logo!);
+    } catch {
+      /* a bad image must not block setup – it can be uploaded again in Settings */
+    }
+  }
   await createSession({ uid: user.id, name: user.name, role: user.role, username: user.username });
   redirect("/");
 }

@@ -14,14 +14,20 @@ export default async function SetupPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-xl font-black text-white">KPR</div>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-2xl text-white">★</div>
           <h1 className="text-2xl font-bold text-white">Welcome! Let&apos;s set up the shop</h1>
           <p className="text-sm text-gray-400">This appears only once. You can change everything later in Settings.</p>
         </div>
         <div className="card p-6">
           <ActionForm action={firstRunSetup} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="sm:col-span-2"><span className="label">Shop name *</span><input name="shopName" className="input" defaultValue="KPR Pitstop N Sportz" required /></label>
+              <label className="sm:col-span-2"><span className="label">Shop / company name *</span><input name="shopName" className="input" placeholder="e.g. KPR Pitstop N Sportz" required /></label>
+              <label className="sm:col-span-2"><span className="label">Tagline (shown under the name)</span><input name="tagline" className="input" placeholder="e.g. Bike & Car Accessories" /></label>
+              <label className="sm:col-span-2">
+                <span className="label">Company logo (optional)</span>
+                <input name="logo" type="file" accept="image/png,image/jpeg,image/webp" className="input py-1.5" />
+                <span className="mt-1 block text-xs text-gray-400">Shown on the login screen, menu and bills. PNG/JPG up to 2 MB. You can add or change it later in Settings.</span>
+              </label>
               <label><span className="label">Shop phone</span><input name="phone" className="input" /></label>
               <label><span className="label">GSTIN</span><input name="gstin" className="input uppercase" maxLength={15} /></label>
               <label className="sm:col-span-2"><span className="label">Address</span><input name="address" className="input" /></label>

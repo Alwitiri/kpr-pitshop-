@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { QuickFind } from "./scan-listener";
+import { BrandMark } from "./brand";
 
 export type NavItem = { href: string; label: string; icon: string };
 
@@ -28,11 +29,13 @@ export function Sidebar({
   user,
   logoutAction,
   shopName,
+  logo,
 }: {
   items: NavItem[];
   user: { name: string; role: string };
   logoutAction: () => Promise<void>;
   shopName: string;
+  logo: string | null;
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -45,7 +48,10 @@ export function Sidebar({
         <button onClick={() => setOpen(true)} className="rounded p-1 hover:bg-white/10" aria-label="Open menu">
           <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></svg>
         </button>
-        <span className="font-bold">{shopName}</span>
+        <span className="flex items-center gap-2 font-bold">
+          <BrandMark logo={logo} name={shopName} size={28} />
+          {shopName}
+        </span>
         <span className="w-6" />
       </div>
       {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
@@ -55,7 +61,7 @@ export function Sidebar({
         }`}
       >
         <div className="flex items-center gap-2.5 px-4 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-xs font-black text-white">KPR</div>
+          <BrandMark logo={logo} name={shopName} size={logo ? 44 : 36} className="shrink-0" />
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-white">{shopName}</div>
             <div className="text-[11px] text-gray-500">Business Manager</div>

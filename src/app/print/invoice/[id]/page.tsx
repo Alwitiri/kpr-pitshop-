@@ -20,6 +20,7 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
     getSettings(),
   ]);
   if (!sale) notFound();
+  const logo = shop.logoFile ? `/api/logo?v=${encodeURIComponent(shop.logoFile)}` : null;
   const summary = gstSummary(sale.items);
   const paidBy = [...new Set(sale.payments.filter((p) => p.amount > 0).map((p) => p.method))].join(" + ") || "Credit";
   const due = sale.total - sale.returnedAmount - sale.paidAmount;
@@ -33,6 +34,10 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
         <style>{`@page { size: 80mm auto; margin: 0 } body { background: white }`}</style>
         <AutoPrint />
         <div className="text-center">
+          {logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" className="mx-auto mb-1 h-16 w-auto max-w-[60%] object-contain grayscale" />
+          )}
           <div className="text-base font-bold">{shop.shopName}</div>
           {shop.tagline && <div>{shop.tagline}</div>}
           {shop.address && <div>{shop.address}</div>}
@@ -97,6 +102,11 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
       <style>{`@page { size: A4; margin: 12mm } body { background: white }`}</style>
       <AutoPrint />
       <div className="flex items-start justify-between border-b-2 border-black pb-3">
+        <div className="flex items-start gap-4">
+        {logo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt="" className="h-20 w-20 object-contain" />
+        )}
         <div>
           <div className="text-2xl font-black">{shop.shopName}</div>
           {shop.tagline && <div className="text-gray-700">{shop.tagline}</div>}
@@ -104,6 +114,7 @@ export default async function InvoicePrint({ params, searchParams }: { params: P
           <div>{[shop.phone && `Ph: ${shop.phone}`, shop.email].filter(Boolean).join(" · ")}</div>
           {shop.gstin && <div className="font-semibold">GSTIN: {shop.gstin}</div>}
           <div>State: {shop.stateName} ({shop.stateCode})</div>
+        </div>
         </div>
         <div className="text-right">
           <div className="text-xl font-bold">{sale.status === "CANCELLED" ? "CANCELLED – " : ""}TAX INVOICE</div>

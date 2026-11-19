@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { login } from "@/actions/auth";
 import { ActionForm, Submit } from "@/components/forms";
+import { BrandMark } from "@/components/brand";
+import { getSettings } from "@/lib/server-utils";
+import { logoUrl } from "@/lib/branding";
 
 // Must check the live database on every request (never pre-rendered at build time)
 export const dynamic = "force-dynamic";
@@ -12,15 +15,14 @@ export const metadata = { title: "Login" };
 export default async function LoginPage() {
   if ((await db.user.count()) === 0) redirect("/setup");
   if (await getSession()) redirect("/");
+  const [settings, logo] = await Promise.all([getSettings(), logoUrl()]);
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-xl font-black text-white">
-            KPR
-          </div>
-          <h1 className="text-2xl font-bold text-white">KPR Pitstop N Sportz</h1>
-          <p className="text-sm text-gray-400">Business Management System</p>
+          <BrandMark logo={logo} name={settings.shopName} size={logo ? 104 : 64} className="mx-auto mb-3 shadow-lg" />
+          <h1 className="text-2xl font-bold text-white">{settings.shopName}</h1>
+          <p className="text-sm text-gray-400">{settings.tagline || "Business Management System"}</p>
         </div>
         <div className="card p-6">
           <ActionForm action={login} className="space-y-4">

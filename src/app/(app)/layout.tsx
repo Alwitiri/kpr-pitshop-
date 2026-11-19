@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items = NAV.filter((n) => can(s.role, n.module)).map(({ href, label, icon }) => ({ href, label, icon }));
   return (
     <div className="min-h-screen">
-      <Sidebar items={items} user={{ name: s.name, role: s.role }} logoutAction={logout} shopName={settings.shopName} />
+      <Sidebar items={items} user={{ name: s.name, role: s.role }} logoutAction={logout} shopName={settings.shopName} logo={settings.logoFile ? `/api/logo?v=${encodeURIComponent(settings.logoFile)}` : null} />
       <ScanListener canProducts={can(s.role, "products")} canSales={can(s.role, "sales")} />
       <main className="lg:pl-60 print:pl-0">
         <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:py-7 print:max-w-none print:p-0">{children}</div>

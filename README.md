@@ -32,6 +32,16 @@ Nothing else is needed on the shop PC: Node.js is bundled, and the window uses M
 - **Manual (owner only):** Settings → *Backups* has *Back up now*, download (to save on a pen drive), and *Restore*. Restore saves a safety copy of the current data first.
 - **Advice for the shop owner:** copy a backup to a pen drive every week, because a dead hard disk takes the backups with it.
 
+### Company logo (each shop its own)
+
+Each installation is branded for its own business:
+- **First-run setup** asks for the shop name, tagline and an optional **logo**.
+- **Settings → Company logo** uploads, replaces or removes it. PNG, JPG or WEBP up to 2 MB; square works best.
+- **Where it appears:** the login screen (with the shop's name and tagline), the menu, and the 80 mm (black and white) and A4 bills.
+- **No logo:** the shop's initials are shown instead.
+
+The logo file is kept in `data\branding`. The `.db` backups contain the shop's data but not the logo image. When moving to a new PC, copy the whole `data` folder, or upload the logo again.
+
 ### Barcodes & scanner
 
 Any USB or Bluetooth barcode scanner in "keyboard" mode works with no setup. Most scanners come in this mode.

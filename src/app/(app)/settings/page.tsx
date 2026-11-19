@@ -9,12 +9,15 @@ import { backupDir, dbFilePath } from "@/lib/paths";
 import { fmtDateTime } from "@/lib/format";
 import { Toggle } from "@/components/forms";
 import { networkInterfaces } from "node:os";
+import { BrandMark } from "@/components/brand";
+import { uploadLogo, deleteLogo } from "@/actions/branding";
 
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const session = await requirePage("settings");
   const s = await getSettings();
+  const logo = s.logoFile ? `/api/logo?v=${encodeURIComponent(s.logoFile)}` : null;
   const isOwner = session.role === "OWNER";
   const backups = isOwner ? await listBackups() : [];
   const port = process.env.PORT ?? "3000";
@@ -50,6 +53,24 @@ export default async function SettingsPage() {
           </ActionForm>
         </Section>
         <div className="space-y-5">
+          <Section title="Company logo">
+            <div className="flex items-center gap-4">
+              <BrandMark logo={logo} name={s.shopName} size={88} className="border" />
+              <p className="text-sm text-gray-600">
+                {logo ? "Shown on the login screen, the menu and printed bills." : "No logo yet – the shop's initials are shown instead."}
+              </p>
+            </div>
+            <ActionForm action={uploadLogo} resetOnSuccess className="mt-4 space-y-2">
+              <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" className="input py-1.5" required />
+              <p className="text-xs text-gray-500">PNG, JPG or WEBP, up to 2 MB. A square logo on a white or transparent background looks best.</p>
+              <Submit>{logo ? "Replace logo" : "Upload logo"}</Submit>
+            </ActionForm>
+            {logo && (
+              <ActionForm action={deleteLogo} className="mt-2">
+                <Submit className="btn-ghost btn-sm text-red-600" confirm="Remove the logo?">Remove logo</Submit>
+              </ActionForm>
+            )}
+          </Section>
           <Section title="Backups">
             <p className="mb-3 text-sm text-gray-600">
               A backup is taken <b>automatically every day</b> (last 30 kept) in <span className="break-all font-mono text-xs">{backupDir()}</span>.
