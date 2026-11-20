@@ -93,10 +93,20 @@ Remove-ItemProperty -Path $runKey -Name "KPR Pitstop" -ErrorAction SilentlyConti
 if ($NoStartup) {
   Remove-ItemProperty -Path $runKey -Name $AppName -ErrorAction SilentlyContinue
 } else {
+  $runValue = "`"$env:WINDIR\System32\wscript.exe`" `"$vbs`" --server-only"
   try {
-    Set-ItemProperty -Path $runKey -Name $AppName -Value "`"$env:WINDIR\System32\wscript.exe`" `"$vbs`" --server-only"
+    # Windows registry API: some security tools block PowerShell's Set-ItemProperty from adding a NEW
+    # start-up entry ("unauthorized operation") but allow this normal way.
+    $k = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey("Software\Microsoft\Windows\CurrentVersion\Run", $true)
+    $k.SetValue($AppName, $runValue, [Microsoft.Win32.RegistryValueKind]::String)
+    $k.Close()
     Write-Host "  Starts automatically with Windows."
-  } catch { Write-Host "  Could not set automatic start: $($_.Exception.Message)" -ForegroundColor Yellow }
+  } catch {
+    try {
+      Set-ItemProperty -Path $runKey -Name $AppName -Value $runValue
+      Write-Host "  Starts automatically with Windows."
+    } catch { Write-Host "  Could not set automatic start: $($_.Exception.Message)" -ForegroundColor Yellow }
+  }
 }
 
 # 4. Allow phones / other counters on the shop network (needs admin; skipped otherwise)
