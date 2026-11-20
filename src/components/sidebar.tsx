@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { QuickFind } from "./scan-listener";
 import { BrandMark } from "./brand";
+import { InternetStatus, InternetWatcher } from "./internet-status";
 
 export type NavItem = { href: string; label: string; icon: string; badge?: number; group?: string };
 
@@ -18,6 +19,7 @@ const ICONS: Record<string, React.ReactNode> = {
   suppliers: <path d="M20 8h-3V4H3a2 2 0 0 0-2 2v11h2a3 3 0 0 0 6 0h6a3 3 0 0 0 6 0h2v-5zM6 18.5A1.5 1.5 0 1 1 7.5 17 1.5 1.5 0 0 1 6 18.5m13.5-9 2 2.5H17V9.5zM18 18.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5" />,
   customers: <path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3m-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3m0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13m8 0h-1a4.2 4.2 0 0 1 2 3.5V19h6v-2.5c0-2.3-4.7-3.5-7-3.5" />,
   followups: <path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H5V8h14zm-8.5-2.5-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4z" />,
+  whatsapp: <path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1a8.2 8.2 0 0 1-4-3.5c-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.2 3.2 0 0 0 2.1-1.5 2.6 2.6 0 0 0 .2-1.5c-.1-.1-.3-.2-.6-.3M12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.8 9.8 0 1 1 12 21.8M20.5 3.5A11.8 11.8 0 0 0 1.9 17.7L.2 24l6.4-1.7A11.8 11.8 0 0 0 24 12a11.7 11.7 0 0 0-3.5-8.5" />,
   jobcards: <path d="M22.7 19 13.6 9.9a6.4 6.4 0 0 0-1.5-6.9A6.6 6.6 0 0 0 4.7 1.7L9 6 6 9 1.6 4.7A6.6 6.6 0 0 0 3 12.1a6.4 6.4 0 0 0 6.9 1.5l9.1 9.1a1 1 0 0 0 1.4 0l2.3-2.3a1 1 0 0 0 0-1.4" />,
   expenses: <path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2zm-9-2h10V8H12zm4-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5" />,
   reports: <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z" />,
@@ -66,10 +68,12 @@ export function Sidebar({
     if (last && last.title === g) last.items.push(it);
     else groups.push({ title: g, items: [it] });
   }
+  const canWhatsApp = items.some((it) => it.href === "/whatsapp");
   const initials = user.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <>
+      <InternetWatcher />
       <a href="#main" className="sr-only z-[60] rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
         Skip to content
       </a>
@@ -83,6 +87,7 @@ export function Sidebar({
           <div className="truncate text-sm font-bold leading-tight">{current?.label ?? shopName}</div>
           {current && <div className="truncate text-[11px] text-gray-400">{shopName}</div>}
         </div>
+        <InternetStatus compact canWhatsApp={canWhatsApp} />
       </div>
       <div
         className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 lg:hidden no-print ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
@@ -139,6 +144,7 @@ export function Sidebar({
             </div>
           ))}
         </nav>
+        <InternetStatus canWhatsApp={canWhatsApp} />
         <div className="flex items-center gap-2 border-t border-white/10 p-3">
           <Link href="/account" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 hover:bg-white/5" title="My account and password">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gray-800 text-xs font-bold text-white ring-1 ring-white/10">{initials}</span>

@@ -14,6 +14,7 @@ const NAV: (NavItem & { module: Module })[] = [
   { href: "/jobcards", label: "Job Cards", icon: "jobcards", module: "jobcards", group: "Sell" },
   { href: "/customers", label: "Customers (CRM)", icon: "customers", module: "customers", group: "Customers" },
   { href: "/followups", label: "Follow-ups", icon: "followups", module: "followups", group: "Customers" },
+  { href: "/whatsapp", label: "WhatsApp", icon: "whatsapp", module: "whatsapp", group: "Customers" },
   { href: "/products", label: "Products", icon: "products", module: "products", group: "Stock" },
   { href: "/inventory", label: "Inventory", icon: "inventory", module: "inventory", group: "Stock" },
   { href: "/purchases", label: "Purchases", icon: "purchases", module: "purchases", group: "Stock" },
@@ -30,8 +31,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const dueFollowUps = can(s.role, "followups")
     ? await db.followUp.count({ where: { status: "OPEN", dueDate: { lte: dayRange(ymd()).lte } } }).catch(() => 0)
     : 0;
+  const waWaiting = can(s.role, "whatsapp") ? await db.waMessage.count({ where: { status: "QUEUED" } }).catch(() => 0) : 0;
   const items = NAV.filter((n) => can(s.role, n.module)).map(({ href, label, icon, group }) => ({
-    href, label, icon, group, badge: href === "/followups" ? dueFollowUps : undefined,
+    href, label, icon, group, badge: href === "/followups" ? dueFollowUps : href === "/whatsapp" ? waWaiting : undefined,
   }));
   return (
     <div className="min-h-screen">

@@ -7,6 +7,7 @@ import { calcBill } from "@/lib/calc";
 import { money, round2 } from "@/lib/format";
 import { createSale, deleteHeldBill, holdBill, listHeldBills, searchCustomers } from "@/actions/sales";
 import { Icon } from "@/components/icons";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 type Line = { productId: number | null; name: string; hsn?: string | null; qty: number; unitPrice: number; discount: number; gstRate: number; stock: number };
 type Vehicle = { id: number; type: string; make: string; model: string | null; regNo: string | null };
@@ -346,6 +347,9 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
               <a className="btn-outline" href={`/print/invoice/${done.saleId}?size=a4`} target="_blank">Print A4</a>
               <Link className="btn-outline" href={`/sales/${done.saleId}`}>View bill</Link>
               <button className="btn-primary" autoFocus onClick={() => setDone(null)}>New bill</button>
+            </div>
+            <div className="mt-2 flex justify-center">
+              <WhatsAppButton kind="INVOICE" saleId={done.saleId} label="Send bill on WhatsApp" className="btn-outline w-full" />
             </div>
           </div>
         </div>

@@ -3,6 +3,8 @@ import { fmtDate, money } from "@/lib/format";
 import { ActionForm, Submit, Toggle } from "./forms";
 import { completeFollowUp, createFollowUp, reopenFollowUp, snoozeFollowUp } from "@/actions/followups";
 import { Icon } from "./icons";
+import { WhatsAppButton } from "./whatsapp-button";
+import { kindForFollowUp } from "@/lib/wa-templates";
 
 export const FOLLOWUP_LABEL: Record<string, string> = {
   CALL: "Call",
@@ -42,6 +44,7 @@ export type FollowUpItem = {
   customer: { id: number; name: string; phone: string | null } | null;
   assignedTo: { name: string } | null;
   rule: { name: string } | null;
+  refType?: string | null;
   due?: number; // current outstanding (payment follow-ups)
 };
 
@@ -85,6 +88,9 @@ export function FollowUpRows({ items, today, showCustomer = true }: { items: Fol
           <div className="flex flex-wrap items-start gap-1.5">
             {f.status === "OPEN" ? (
               <>
+                {f.customer?.phone && (
+                  <WhatsAppButton kind={kindForFollowUp(f.type, f.refType)} followUpId={f.id} customerId={f.customer.id} className="btn-outline btn-sm" />
+                )}
                 <Toggle label="Done" className="btn-primary btn-sm">
                   <ActionForm action={completeFollowUp} className="w-72 space-y-2">
                     <input type="hidden" name="id" value={f.id} />

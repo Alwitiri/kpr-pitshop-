@@ -58,6 +58,20 @@ let links = 0;
   }
 })(app);
 console.log(`   replaced ${links} symlinks with real folders`);
+// Prisma leaves 21 MB "query_engine-*.node.tmpNNNN" copies when it can't replace a locked engine
+// (e.g. dev server running). They are never used – don't ship them.
+let junk = 0;
+(function dropTmp(dir) {
+  for (const entry of readdirSync(dir)) {
+    const p = path.join(dir, entry);
+    if (lstatSync(p).isDirectory()) dropTmp(p);
+    else if (/\.node\.tmp\d*$/.test(entry)) {
+      rmSync(p, { force: true });
+      junk++;
+    }
+  }
+})(app);
+if (junk) console.log(`   removed ${junk} leftover Prisma engine temp files`);
 const engine = execSync(`dir /s /b "${app}\\*query_engine*.node"`, { encoding: "utf8", shell: "cmd.exe" }).trim();
 if (!engine) throw new Error("Prisma query engine missing from standalone output");
 console.log("   prisma engine:", path.relative(app, engine.split(/\r?\n/)[0]));

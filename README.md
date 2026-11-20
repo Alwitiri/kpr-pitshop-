@@ -118,6 +118,27 @@ Seven rules are installed by default (inactive-customer is off). A rule never cr
 - **Stock integrity:** each stock change goes through `moveStock()` inside a transaction and writes a ledger row.
 - **Security:** a random `AUTH_SECRET` is generated per install in `data\config.json`. Passwords are bcrypt-hashed and sessions are httpOnly cookies (12 h). Cookies are not marked secure, because shop devices use plain http on the local network.
 
-## Next: WhatsApp module (not built)
+## WhatsApp (free click-to-send)
 
-This one part needs internet. Official WhatsApp Cloud API: approved templates, one-click broadcast to opted-in customers, invoice on WhatsApp, payment/warranty reminders.
+The app writes each message and opens WhatsApp with the customer and text ready; staff check it and press **Send**. Nothing is sent by the app itself, so there is **no Meta account and no per-message charge**. It uses the shop's own WhatsApp number.
+
+- **Set up once:** install WhatsApp Desktop on the shop PC (Microsoft Store) and link it to the shop phone. *WhatsApp → Message wording & settings* chooses Desktop app, WhatsApp Web or wa.me links, and the country code (91).
+- **Bills:** *Send bill on WhatsApp* on the POS "Sale complete" screen and on every invoice. Walk-in bills without a number ask for one.
+- **Reminders:** WhatsApp button on every follow-up (payment due, vehicle ready, service due, warranty, birthday, feedback, win-back), on job cards and on customer pages (any message, plus *Remind* next to dues).
+- **Offers:** *WhatsApp → New offer* builds a send list from **opted-in customers only** (filter by segment, bike/car, make, tag, last visit). *Send next* opens each chat in turn; *Opted out* removes a customer's consent.
+- **Wording:** every message is editable with placeholders such as `{customer}`, `{invoice}`, `{total}`, `{due}`, `{vehicle}`; *stars* make bold text.
+- **Log:** every message opened is listed on the WhatsApp screen and in the customer's contact history. WhatsApp does not report whether Send was pressed.
+- **Permission:** the *WhatsApp offers* permission (Staff → Permissions) controls broadcasts and wording; bill and reminder buttons follow the Sales / Customers / Follow-ups permissions.
+- Sending hundreds of offers within minutes to people who never chatted with the shop can get a number restricted by WhatsApp; send at a steady pace.
+
+### Works offline, uses the internet for WhatsApp
+
+Everything (billing, stock, CRM, reports) works with **no internet**. Only WhatsApp needs it.
+
+- **Status light** in the menu (and the phone top bar): the shop PC checks every 30 s whether it can reach WhatsApp. *Check* re-tests at once.
+- **No internet?** WhatsApp buttons don't fail: the message is **saved to WhatsApp → Waiting** with the bill / reminder text ready. A badge shows how many are waiting; when the internet is back, *Open next* sends them one by one. *Open anyway* is there for a phone that has its own mobile data.
+- **Offers pause** while offline, so nobody is marked as sent by mistake.
+- The first time WhatsApp Desktop is opened from the app window, Edge asks "Open WhatsApp?" – tick **Always allow**.
+- Support / testing: starting the server with `KPR_FORCE_OFFLINE=1` makes the app behave as if the internet is down.
+
+An optional automatic mode using the official WhatsApp Cloud API (paid per message) can be added later.

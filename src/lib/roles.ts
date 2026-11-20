@@ -19,6 +19,7 @@ export type Module =
   | "suppliers"
   | "customers"
   | "followups"
+  | "whatsapp"
   | "jobcards"
   | "expenses"
   | "reports"
@@ -40,6 +41,7 @@ export const PERM_GROUPS: { title: string; perms: [Perm, string, string][] }[] =
       ["sales", "Sales & invoices", "View bills, take payments, returns"],
       ["customers", "Customers (CRM)", "Customer profiles, vehicles, dues"],
       ["followups", "Follow-ups", "Call list and customer reminders"],
+      ["whatsapp", "WhatsApp offers", "Offer broadcasts, message wording and sent log"],
       ["jobcards", "Job cards", "Service / installation jobs"],
       ["products", "Products", "Catalogue, prices, barcodes"],
       ["inventory", "Inventory", "Stock levels, adjustments, stock check"],
@@ -68,7 +70,7 @@ export const ALL_PERMS: Perm[] = PERM_GROUPS.flatMap((g) => g.perms.map((p) => p
 /** Factory defaults. The owner can change these in Staff → Permissions. */
 export const DEFAULT_PERMS: Record<Exclude<Role, "OWNER">, Perm[]> = {
   MANAGER: [
-    "dashboard", "pos", "sales", "products", "inventory", "purchases", "suppliers", "customers", "followups",
+    "dashboard", "pos", "sales", "products", "inventory", "purchases", "suppliers", "customers", "followups", "whatsapp",
     "jobcards", "expenses", "reports", "profit", "editPrice", "manageSales", "deleteExpense", "importData",
   ],
   CASHIER: ["dashboard", "pos", "sales", "customers", "followups", "jobcards"],

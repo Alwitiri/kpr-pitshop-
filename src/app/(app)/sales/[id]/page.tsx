@@ -9,6 +9,7 @@ import { Badge, PageHeader, Section, TableWrap } from "@/components/ui";
 import { ActionForm, Submit, Toggle } from "@/components/forms";
 import { PaymentForm } from "@/components/payment-form";
 import { addSalePayment, cancelSale, createSaleReturn } from "@/actions/sales";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const r = await db.sale.findUnique({ where: { id: Number((await params).id) || 0 }, select: { invoiceNo: true } });
@@ -45,6 +46,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         back="/sales"
         actions={
           <>
+            {sale.status !== "CANCELLED" && <WhatsAppButton kind="INVOICE" saleId={sale.id} label="Send on WhatsApp" />}
             <a className="btn-outline" href={`/print/invoice/${sale.id}?size=80mm`} target="_blank">Print receipt (80mm)</a>
             <a className="btn-dark" href={`/print/invoice/${sale.id}?size=a4`} target="_blank">Print A4 invoice</a>
           </>

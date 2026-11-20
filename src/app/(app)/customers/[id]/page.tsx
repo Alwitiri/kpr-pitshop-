@@ -15,6 +15,7 @@ import { ymd } from "@/lib/format";
 import { SEGMENTS, segmentOf } from "@/lib/crm";
 import { FollowUpRows, NewFollowUpForm } from "@/components/followups";
 import { Icon } from "@/components/icons";
+import { WhatsAppButton, WhatsAppMenu } from "@/components/whatsapp-button";
 
 const INTERACTION_LABEL: Record<string, string> = { CALL: "Call", VISIT: "Visit", WHATSAPP: "WhatsApp", COMPLAINT: "Complaint", NOTE: "Note" };
 const INTERACTION_ICON: Record<string, [string, string]> = {
@@ -166,8 +167,14 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           )}
         </div>
         <div className="space-y-5">
+          {c.phone && (
+            <Section title="WhatsApp" actions={c.whatsappOptIn ? <span className="badge bg-emerald-50 text-emerald-700">Offers allowed</span> : <span className="badge bg-gray-100 text-gray-600">Service messages only</span>}>
+              <WhatsAppMenu customerId={c.id} />
+              <p className="mt-2 text-xs text-gray-500">Opens WhatsApp with the message ready – check it and press Send.</p>
+            </Section>
+          )}
           {due > 0.5 && (
-            <Section title={`Receive dues · ${money(due)}`}>
+            <Section title={`Receive dues · ${money(due)}`} actions={c.phone ? <WhatsAppButton kind="PAYMENT_DUE" customerId={c.id} label="Remind" className="btn-outline btn-sm" /> : undefined}>
               <PaymentForm action={receiveCustomerPayment} hidden={{ customerId: c.id }} defaultAmount={due} submitLabel="Receive payment" />
             </Section>
           )}

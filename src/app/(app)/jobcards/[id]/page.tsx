@@ -10,6 +10,7 @@ import { Badge, PageHeader, Section, TableWrap } from "@/components/ui";
 import { ActionForm, PrintButton, Submit, Toggle } from "@/components/forms";
 import { ProductPicker } from "@/components/product-picker";
 import { addJobPart, removeJobPart, setJobStatus, updateJobCard } from "@/actions/jobcards";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 const toLocalInput = (d: Date | null) => (d ? new Date(d.getTime() + 5.5 * 3600e3).toISOString().slice(0, 16) : "");
 
@@ -42,6 +43,11 @@ export default async function JobCardPage({ params }: { params: Promise<{ id: st
         back="/jobcards"
         actions={
           <>
+            <WhatsAppButton
+              kind={j.status === "COMPLETED" ? "VEHICLE_READY" : "GENERAL"}
+              jobCardId={j.id}
+              label={j.status === "COMPLETED" ? "WhatsApp: vehicle ready" : "WhatsApp"}
+            />
             <PrintButton label="Print job card" />
             {!j.sale && j.status !== "CANCELLED" && can(s.role, "pos") && <Link href={`/pos?job=${j.id}`} className="btn-primary">Create invoice</Link>}
             {j.sale && <Link href={`/sales/${j.sale.id}`} className="btn-outline">Invoice {j.sale.invoiceNo}</Link>}

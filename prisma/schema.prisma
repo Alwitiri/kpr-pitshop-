@@ -73,6 +73,8 @@ model ShopSettings {
   bankDetails     String? @default("")
   upiId           String? @default("")
   logoFile        String? // file name inside data/branding – each shop uploads its own logo
+  waOpenWith      String  @default("APP") // APP = WhatsApp Desktop / phone app, WEB = WhatsApp Web
+  waCountryCode   String  @default("91")
 }
 
 // Owner-editable permissions for each role (JSON list of modules / abilities).
@@ -285,6 +287,7 @@ model Customer {
   jobCards     JobCard[]
   followUps    FollowUp[]
   interactions CustomerInteraction[]
+  waMessages   WaMessage[]
 
   @@index([name])
 }
@@ -526,4 +529,62 @@ model DayClose {
   note        String?
   closedById  Int?
   createdAt   DateTime @default(now())
+}
+
+// ───────────────────────────── WhatsApp (free click-to-send) ─────────────────────────────
+// The app writes the message and opens WhatsApp with it; staff press Send.
+// Nothing is sent by the app itself, so there is no Meta account or per-message charge.
+
+// Owner-edited wording of each message. Missing keys use the built-in default text.
+model WaTemplate {
+  key  String @id // INVOICE | PAYMENT_DUE | VEHICLE_READY | SERVICE_DUE | WARRANTY | BIRTHDAY | FEEDBACK | WIN_BACK | GENERAL | OFFER
+  body String
+}
+
+// Every message opened in WhatsApp (we cannot see if staff pressed Send, so this is "opened to send").
+model WaMessage {
+  id         Int       @id @default(autoincrement())
+  customerId Int?
+  phone      String
+  kind       String
+  body       String
+  saleId     Int?
+  jobCardId  Int?
+  followUpId Int?
+  campaignId Int?
+  userId     Int?
+  userName   String?
+  status     String    @default("OPENED") // OPENED | QUEUED (no internet – waiting to be opened) | REMOVED
+  openedAt   DateTime?
+  createdAt  DateTime  @default(now())
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([status])
+}
+
+// An offer sent to a chosen group of opted-in customers, one chat at a time.
+model WaCampaign {
+  id          Int                   @id @default(autoincrement())
+  name        String
+  body        String
+  audience    String? // human description of the filters used
+  createdById Int?
+  createdAt   DateTime              @default(now())
+  recipients  WaCampaignRecipient[]
+}
+
+model WaCampaignRecipient {
+  id         Int        @id @default(autoincrement())
+  campaignId Int
+  customerId Int?
+  name       String
+  phone      String
+  status     String     @default("PENDING") // PENDING | SENT | SKIPPED | OPTED_OUT
+  sentAt     DateTime?
+  sentById   Int?
+  campaign   WaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
 }

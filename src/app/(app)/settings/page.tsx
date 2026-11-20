@@ -123,10 +123,11 @@ export default async function SettingsPage() {
           <Section title="Data location">
             <p className="break-all font-mono text-xs text-gray-600">{dbFilePath()}</p>
           </Section>
-          <Section title="Coming next">
+          <Section title="WhatsApp" actions={<a href="/whatsapp/settings" className="link text-xs">Open</a>}>
             <p className="text-sm text-gray-600">
-              <b>WhatsApp module</b> – one-click offers to opted-in customers, invoice on WhatsApp, payment and warranty reminders. Customer WhatsApp consent is already being recorded at billing so the list is ready when this is switched on.
+              Free click-to-send: bills, reminders and offers open in WhatsApp with the message ready. Change how WhatsApp opens and the wording of each message.
             </p>
+            <a href="/whatsapp/settings" className="btn-outline mt-3 inline-block">WhatsApp settings</a>
           </Section>
         </div>
       </div>
