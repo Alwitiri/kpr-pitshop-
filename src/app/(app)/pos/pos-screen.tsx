@@ -8,6 +8,7 @@ import { money, round2 } from "@/lib/format";
 import { createSale, deleteHeldBill, holdBill, listHeldBills, searchCustomers } from "@/actions/sales";
 import { Icon } from "@/components/icons";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { ReceiptButton, runReceiptPrint } from "@/components/receipt-print";
 
 type Line = { productId: number | null; name: string; hsn?: string | null; qty: number; unitPrice: number; discount: number; gstRate: number; stock: number };
 type Vehicle = { id: number; type: string; make: string; model: string | null; regNo: string | null };
@@ -18,7 +19,7 @@ export type PosPreload = { jobCardId: number; jobNumber: string; customer: Custo
 
 const METHODS = ["CASH", "UPI", "CARD", "BANK"];
 
-export function PosScreen({ products, canEditPrice, canAddProduct, preload, shopState }: { products: PickProduct[]; canEditPrice: boolean; canAddProduct: boolean; preload: PosPreload | null; shopState: string }) {
+export function PosScreen({ products, canEditPrice, canAddProduct, preload, shopState, autoReceipt = false, receiptLabel = "Print receipt" }: { products: PickProduct[]; canEditPrice: boolean; canAddProduct: boolean; preload: PosPreload | null; shopState: string; autoReceipt?: boolean; receiptLabel?: string }) {
   const [lines, setLines] = useState<Line[]>(preload?.lines ?? []);
   const [billDiscount, setBillDiscount] = useState(0);
   const [interState, setInterState] = useState(false);
@@ -130,6 +131,8 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
       if (res.error) return setError(res.error);
       const paidNow = effectivePays.reduce((a, p) => a + (p.amount || 0), 0);
       setDone({ saleId: res.saleId!, invoiceNo: res.invoiceNo!, total: bill.total, change: paidNow > bill.total ? round2(paidNow - bill.total) : 0 });
+      // Settings → Printing → "Print the receipt automatically after every sale"
+      if (autoReceipt) runReceiptPrint(res.saleId!).catch(() => null);
       reset();
     });
   }
@@ -343,7 +346,7 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
             <p className="text-sm text-gray-500">Invoice {done.invoiceNo} · {money(done.total)}</p>
             {done.change > 0 && <p className="mt-2 text-lg font-bold text-emerald-700">Give change: {money(done.change)}</p>}
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <a className="btn-dark" href={`/print/invoice/${done.saleId}?size=80mm`} target="_blank">Print receipt</a>
+              <ReceiptButton saleId={done.saleId} label={autoReceipt ? "Print again" : receiptLabel} className="btn-dark w-full" />
               <a className="btn-outline" href={`/print/invoice/${done.saleId}?size=a4`} target="_blank">Print A4</a>
               <Link className="btn-outline" href={`/sales/${done.saleId}`}>View bill</Link>
               <button className="btn-primary" autoFocus onClick={() => setDone(null)}>New bill</button>

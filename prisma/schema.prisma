@@ -82,6 +82,9 @@ model ShopSettings {
   waCloudVersion   String  @default("v22.0")
   waCloudTemplates String? // JSON cache of approved templates loaded from Meta
   waAutoInvoice    Boolean @default(false) // send the bill automatically after every sale
+  receiptWidth     String  @default("80mm") // 80mm | 58mm thermal receipt paper
+  silentPrint      Boolean @default(false) // shop PC: receipts go straight to the default printer, no print window
+  receiptAutoPrint Boolean @default(false) // print the receipt automatically after every sale
 }
 
 // Owner-editable permissions for each role (JSON list of modules / abilities).

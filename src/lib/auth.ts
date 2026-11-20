@@ -28,6 +28,33 @@ export async function createSession(s: Session) {
   });
 }
 
+/**
+ * One-time, 60-second login link for a print window the server opens on the shop PC
+ * (it runs in its own browser profile, so it has no session cookie of its own).
+ */
+const usedHandoffs = globalThis as unknown as { __kprHandoffs?: Set<string> };
+export async function createHandoffToken(s: Session) {
+  return new SignJWT({ ...s, typ: "handoff" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime("60s")
+    .sign(secret);
+}
+export async function redeemHandoffToken(token: string): Promise<Session | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.typ !== "handoff" || !payload.jti) return null;
+    const used = (usedHandoffs.__kprHandoffs ??= new Set());
+    if (used.has(payload.jti)) return null; // single use
+    used.add(payload.jti);
+    if (used.size > 500) used.clear();
+    return { uid: Number(payload.uid), name: String(payload.name), role: String(payload.role), username: String(payload.username) };
+  } catch {
+    return null;
+  }
+}
+
 export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
@@ -37,6 +64,7 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
+    if (payload.typ === "handoff") return null; // a print-window login link is not a session
     return {
       uid: Number(payload.uid),
       name: String(payload.name),

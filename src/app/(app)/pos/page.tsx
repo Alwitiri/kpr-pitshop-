@@ -39,6 +39,8 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       canAddProduct={can(s.role, "products")}
       preload={preload}
       shopState={settings.stateName}
+      autoReceipt={settings.receiptAutoPrint}
+      receiptLabel={`Print receipt (${settings.receiptWidth.replace("mm", " mm")})`}
     />
   );
 }

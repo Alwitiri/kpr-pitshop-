@@ -109,6 +109,11 @@ FORGOT USERNAME OR PASSWORD
   Owner: on this PC open Start menu > KPR Pitstop > "Reset KPR password".
          It lists all usernames and sets a new password.
 
+PRINTERS
+  Receipt printer (80 mm or 58 mm thermal) and label printer: install their Windows drivers.
+  Settings > Printing: choose the receipt paper, and switch on "Silent printing" to print
+  receipts without the print window (they go to the Windows DEFAULT printer).
+
 BACKUPS
   Automatic daily backup in C:\\KPR Pitstop\\data\\backups (last 30 kept).
   Settings > Backups to download a copy to a pen drive or restore.

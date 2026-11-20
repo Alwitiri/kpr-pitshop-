@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
+import { getSettings } from "@/lib/server-utils";
 import { can, canSeeProfit } from "@/lib/roles";
 import { fmtDate, fmtDateTime, money, qty, round2 } from "@/lib/format";
 import { label } from "@/lib/calc";
@@ -10,6 +11,7 @@ import { ActionForm, Submit, Toggle } from "@/components/forms";
 import { PaymentForm } from "@/components/payment-form";
 import { addSalePayment, cancelSale, createSaleReturn } from "@/actions/sales";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { ReceiptButton } from "@/components/receipt-print";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const r = await db.sale.findUnique({ where: { id: Number((await params).id) || 0 }, select: { invoiceNo: true } });
@@ -19,6 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function SalePage({ params }: { params: Promise<{ id: string }> }) {
   const s = await requirePage("sales");
   const id = Number((await params).id);
+  const shop = await getSettings();
   const sale = await db.sale.findUnique({
     where: { id },
     include: {
@@ -47,7 +50,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
         actions={
           <>
             {sale.status !== "CANCELLED" && <WhatsAppButton kind="INVOICE" saleId={sale.id} label="Send on WhatsApp" />}
-            <a className="btn-outline" href={`/print/invoice/${sale.id}?size=80mm`} target="_blank">Print receipt (80mm)</a>
+            <ReceiptButton saleId={sale.id} label={`Print receipt (${shop.receiptWidth.replace("mm", " mm")})`} />
             <a className="btn-dark" href={`/print/invoice/${sale.id}?size=a4`} target="_blank">Print A4 invoice</a>
           </>
         }

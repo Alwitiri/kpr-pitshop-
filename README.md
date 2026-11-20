@@ -58,7 +58,16 @@ Any USB or Bluetooth barcode scanner in "keyboard" mode works with no setup. Mos
 | **Anywhere else** | Scanning a product opens it (counter staff instead see its price and stock). Scanning the barcode on a printed bill opens that bill for returns or reprints. |
 | **Sidebar "Scan / find"** | Type or scan a barcode or bill number. |
 
-Printed bills (80 mm and A4) carry the invoice number as a barcode.
+Printed bills (80 mm / 58 mm receipts and A4) carry the invoice number as a barcode.
+
+### Printers (Settings → Printing)
+
+- **Receipt printer:** any 80 mm or 58 mm thermal printer with a Windows driver (Epson TM-T82, TVS RP-3160, Retsol…). Choose the **receipt paper** (80 mm or 58 mm) in Settings → Printing; every "Print receipt" button follows it. In the printer driver set the same paper width.
+- **Silent printing** (shop PC): receipts print straight to the **Windows default printer** with no print window – make the receipt printer the default. Behind the scenes the server opens the receipt in a small off-screen Edge window with Edge's `--kiosk-printing` switch and its own profile (`data\edge-print`), using a one-time 60-second login link. A4 invoices and barcode stickers keep the normal print window so a label printer can still be chosen. Phones / other counters always get the print window.
+- **Print the receipt automatically after every sale:** no need to press "Print receipt" (best with silent printing).
+- **Test print** prints the latest bill's receipt with the saved settings.
+- **Label printer** for barcode stickers: any thermal label printer with a Windows driver (TSC, TVS LP-46, Zebra…); set the label size in the driver.
+- Support: `KPR_SILENT_PRINT_DRYRUN=1` logs the silent-print link instead of printing; `/print/invoice/<id>?size=58mm&preview=1` shows a receipt without printing.
 
 ## Development
 
