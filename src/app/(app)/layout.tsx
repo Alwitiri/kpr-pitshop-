@@ -1,6 +1,8 @@
 import { requirePage } from "@/lib/auth";
 import { can, type Module } from "@/lib/roles";
 import { getSettings } from "@/lib/server-utils";
+import { headers } from "next/headers";
+import { recordDevice } from "@/lib/network";
 import { db } from "@/lib/db";
 import { dayRange, ymd } from "@/lib/format";
 import { logout } from "@/actions/auth";
@@ -28,6 +30,7 @@ const NAV: (NavItem & { module: Module })[] = [
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await requirePage();
   const settings = await getSettings();
+  recordDevice(await headers(), s); // Settings → Connect devices shows who is using the app
   const dueFollowUps = can(s.role, "followups")
     ? await db.followUp.count({ where: { status: "OPEN", dueDate: { lte: dayRange(ymd()).lte } } }).catch(() => 0)
     : 0;

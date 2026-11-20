@@ -9,7 +9,7 @@ import { openSilentPrint } from "@/lib/silent-print";
 
 export type PrintResult = { mode: "silent" | "dialog"; note?: string; error?: string };
 
-/** True when the request comes from the shop PC itself (the one running KPR Pitstop). */
+/** True when the request comes from the shop PC itself (the one running Spoaxio Software). */
 async function shopPc() {
   const h = await headers();
   const host = h.get("host") ?? "";

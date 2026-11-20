@@ -104,7 +104,7 @@ export function Sidebar({
           <BrandMark logo={logo} name={shopName} size={logo ? 44 : 36} className="shrink-0" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-bold text-white">{shopName}</div>
-            <div className="text-[11px] text-gray-400">Business Manager</div>
+            <div className="text-[11px] text-gray-400">Spoaxio Software</div>
           </div>
           <button onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-gray-400 hover:bg-white/10 hover:text-white lg:hidden" aria-label="Close menu">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>

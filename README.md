@@ -1,4 +1,4 @@
-# KPR Pitstop N Sportz – Business Management System
+# Spoaxio Software – Business Management System (for KPR Pitstop N Sportz)
 
 Offline Windows software for a bike & car accessories shop: billing, inventory, purchases, CRM, job cards, expenses, staff and reports.
 It runs entirely on the shop's PC with **no internet**. Other devices on the shop Wi-Fi can use it too.
@@ -6,10 +6,10 @@ WhatsApp messaging is **not built yet** (planned next). Customer WhatsApp consen
 
 ## Install at a client (the shop PC)
 
-1. On your dev PC: `npm run package`. This creates `dist/KPR-Pitstop-<version>/` and a `.zip` of it (about 80 MB).
+1. On your dev PC: `npm run package`. This creates `dist/Spoaxio-Software-<version>/` and a `.zip` of it (about 80 MB).
 2. Copy the folder (or unzip the zip) onto the shop PC using a pen drive.
-3. Right-click **Install KPR Pitstop.cmd** → *Run as administrator*. Admin is only needed for the firewall rule that lets phones and other counters connect.
-4. Double-click the **KPR Pitstop** icon on the desktop. On first launch it asks for the shop name and creates the owner login.
+3. Right-click **Install Spoaxio Software.cmd** → *Run as administrator*. Admin is only needed for the firewall rule that lets phones and other counters connect.
+4. Double-click the **Spoaxio Software** icon on the desktop. On first launch it asks for the shop name and creates the owner login.
 
 Nothing else is needed on the shop PC: Node.js is bundled, and the window uses Microsoft Edge in app mode, which comes with Windows.
 
@@ -20,9 +20,10 @@ Nothing else is needed on the shop PC: Node.js is bundled, and the window uses M
 
 - **Updating a client:** run the new version's installer. It stops the app, replaces `program`, and on start-up the database is upgraded automatically.
 - **Starting automatically:** the app starts in the background when Windows starts (via the registry key `HKCU\...\Run`), and the desktop icon just opens the window.
-- **Other devices:** Settings → *Use on other devices* shows the address to open, e.g. `http://192.168.1.5:3780`.
-- **Stopping the app:** use Start menu → *Stop KPR Pitstop*. Run this before copying data by hand.
-- **Forgotten password:** staff passwords are reset by the owner (*Staff → Edit*). If the owner forgets, open Start menu → **Reset KPR password** on the shop PC (or run `program\launcher.js --reset-password`). It lists every username, sets a new password, re-enables the login, and records the reset in the activity log. It only works on the PC that holds the data.
+- **Other devices:** Settings → **Connect devices** shows the address with a **QR code** to scan, a live **firewall check** with an **Allow phones & other PCs** button (owner, on the shop PC – Windows asks for administrator approval), the **devices using the app**, and a shortcut for a second counter PC. Phones can **Add to Home screen** (Spoaxio icon). Start menu → Spoaxio Software → *Allow phones & other PCs* does the firewall step too. Phone hotspots / "guest" or "IoT" Wi-Fi often isolate devices – use a normal router and give the shop PC a fixed address (DHCP reservation).
+- **Name and folder:** the software is called **Spoaxio Software**; it still installs to `C:\KPR Pitstop` so earlier installs keep their data. Updating from a "KPR Pitstop" version removes the old shortcuts and auto-start entry.
+- **Stopping the app:** use Start menu → *Stop Spoaxio Software*. Run this before copying data by hand.
+- **Forgotten password:** staff passwords are reset by the owner (*Staff → Edit*). If the owner forgets, open Start menu → **Reset password** on the shop PC (or run `program\launcher.js --reset-password`). It lists every username, sets a new password, re-enables the login, and records the reset in the activity log. It only works on the PC that holds the data.
 - **Troubleshooting:** run `program\node\node.exe program\launcher.js --foreground` to see the server output. Logs are in `data\logs`.
 - **Uninstalling:** run `powershell -ExecutionPolicy Bypass -File uninstall.ps1`. The data folder is kept.
 

@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { checkInternet } from "@/lib/internet";
 import { db } from "@/lib/db";
+import { recordDevice } from "@/lib/network";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const s = await getSession();
   if (!s) return Response.json({ error: "login" }, { status: 401 });
+  recordDevice(req.headers, s); // every open window checks in every 30 s → "last seen"
   const force = new URL(req.url).searchParams.has("force");
   const [online, queued] = await Promise.all([checkInternet(force), db.waMessage.count({ where: { status: "QUEUED", channel: "CLICK" } })]);
   return Response.json({ online, queued, checkedAt: Date.now() }, { headers: { "Cache-Control": "no-store" } });

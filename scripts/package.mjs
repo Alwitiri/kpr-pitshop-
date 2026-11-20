@@ -1,14 +1,14 @@
 // Builds the offline Windows package:
-//   dist/KPR-Pitstop-<version>/            (folder you can copy on a pen drive)
-//   dist/KPR-Pitstop-<version>.zip         (same, zipped)
-// Contents: "Install KPR Pitstop.cmd", install.ps1, uninstall.ps1, program/ (app + node.exe + launcher)
+//   dist/Spoaxio-Software-<version>/            (folder you can copy on a pen drive)
+//   dist/Spoaxio-Software-<version>.zip         (same, zipped)
+// Contents: "Install Spoaxio Software.cmd", install.ps1, uninstall.ps1, program/ (app + node.exe + launcher)
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-const name = `KPR-Pitstop-${pkg.version}`;
+const name = `Spoaxio-Software-${pkg.version}`;
 const out = path.join(root, "dist", name);
 const program = path.join(out, "program");
 const app = path.join(program, "app");
@@ -82,31 +82,31 @@ cpSync(process.execPath, path.join(program, "node", "node.exe"));
 
 console.log("5/6 Launcher & installer");
 const crlf = (s) => s.replace(/\r?\n/g, "\r\n");
-for (const f of ["launcher.js", "kpr.ico"]) cpSync(path.join(root, "packaging", f), path.join(program, f));
-writeFileSync(path.join(program, "KPR Pitstop.vbs"), crlf(readFileSync("packaging/KPR Pitstop.vbs", "utf8")));
-for (const f of ["install.ps1", "uninstall.ps1", "Install KPR Pitstop.cmd"]) {
+for (const f of ["launcher.js", "kpr.ico", "allow-network.ps1"]) cpSync(path.join(root, "packaging", f), path.join(program, f));
+writeFileSync(path.join(program, "Spoaxio Software.vbs"), crlf(readFileSync("packaging/Spoaxio Software.vbs", "utf8")));
+for (const f of ["install.ps1", "uninstall.ps1", "Install Spoaxio Software.cmd"]) {
   writeFileSync(path.join(out, f), crlf(readFileSync(path.join("packaging", f), "utf8")));
 }
 writeFileSync(
   path.join(out, "README.txt"),
-  crlf(`KPR Pitstop ${pkg.version} - offline business software
+  crlf(`Spoaxio Software ${pkg.version} - offline business software
 
 INSTALL / UPDATE
   1. Copy this whole folder to the shop PC (pen drive is fine).
-  2. Right-click "Install KPR Pitstop.cmd" > Run as administrator
+  2. Right-click "Install Spoaxio Software.cmd" > Run as administrator
      (administrator is only needed so phones / other counters on the shop Wi-Fi can connect).
-  3. A "KPR Pitstop" icon appears on the desktop. The first time, it asks for the shop name and owner password.
+  3. A "Spoaxio Software" icon appears on the desktop. The first time, it asks for the shop name and owner password.
 
 WHERE THINGS ARE
   Program : C:\\KPR Pitstop\\program   (replaced on every update)
   Data    : C:\\KPR Pitstop\\data      (database kpr.db, backups, uploads - never touched by updates)
 
 UPDATING
-  Run the new version's "Install KPR Pitstop.cmd". Data is kept and upgraded automatically.
+  Run the new version's "Install Spoaxio Software.cmd". Data is kept and upgraded automatically.
 
 FORGOT USERNAME OR PASSWORD
   Staff: the owner sets a new one in Staff > Edit.
-  Owner: on this PC open Start menu > KPR Pitstop > "Reset KPR password".
+  Owner: on this PC open Start menu > Spoaxio Software > "Reset password".
          It lists all usernames and sets a new password.
 
 PRINTERS

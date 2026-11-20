@@ -117,13 +117,13 @@ export default async function SettingsPage() {
               <p className="text-sm text-gray-500">Only the owner can download or restore backups.</p>
             )}
           </Section>
-          <Section title="Use on other devices in the shop">
-            <p className="mb-2 text-sm text-gray-600">Phones, tablets or a second counter PC on the <b>same Wi-Fi / network</b> can open this address in their browser (no internet needed):</p>
+          <Section title="Use on other devices in the shop" actions={<a href="/settings/devices" className="link text-xs">Open</a>}>
+            <p className="mb-2 text-sm text-gray-600">Phones, tablets or a second counter PC on the <b>same Wi-Fi</b> open this address (no internet needed):</p>
             <ul className="space-y-1 font-mono text-sm">
               {lan.map((a) => <li key={a}>http://{a}:{port}</li>)}
               {!lan.length && <li className="font-sans text-gray-500">This PC is not connected to a network.</li>}
             </ul>
-            <p className="mt-2 text-xs text-gray-500">If it doesn&apos;t open, allow “KPR Pitstop / Node.js” in Windows Firewall on this PC.</p>
+            <a href="/settings/devices" className="btn-outline mt-3 inline-block">Connect devices – QR code &amp; check</a>
           </Section>
           <Section title="Data location">
             <p className="break-all font-mono text-xs text-gray-600">{dbFilePath()}</p>

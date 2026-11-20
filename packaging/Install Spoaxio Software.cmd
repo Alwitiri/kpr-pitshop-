@@ -1,5 +1,5 @@
 @echo off
-title KPR Pitstop installer
+title Spoaxio Software installer
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1" %*
 echo.
 pause

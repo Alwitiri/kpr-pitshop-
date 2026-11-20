@@ -44,7 +44,7 @@ export default async function LoginPage() {
             <ul className="mt-2 list-disc space-y-1 pl-4">
               <li><b>Staff:</b> ask the owner. They can set a new password in <i>Staff → Edit</i>.</li>
               <li>
-                <b>Owner:</b> on the main shop computer, open the <b>Start menu → KPR Pitstop → Reset KPR password</b>.
+                <b>Owner:</b> on the main shop computer, open the <b>Start menu → Spoaxio Software → Reset password</b>.
                 It lists all usernames and lets you set a new password.
               </li>
             </ul>

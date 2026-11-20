@@ -1,4 +1,4 @@
-' Starts KPR Pitstop without showing a black console window.
+' Starts Spoaxio Software without showing a black console window.
 ' Optional argument: --server-only  or  --stop
 Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)

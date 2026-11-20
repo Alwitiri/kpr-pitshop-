@@ -1,4 +1,4 @@
-// KPR Pitstop desktop launcher (runs with the bundled node.exe, no install needed).
+// Spoaxio Software desktop launcher (runs with the bundled node.exe, no install needed).
 //   node launcher.js                -> start the app (if needed) and open the window
 //   node launcher.js --server-only  -> start the app in the background only (Windows start-up)
 //   node launcher.js --stop         -> stop the background app (before updating)
@@ -141,7 +141,7 @@ async function main() {
     const ok = await waitUp(c.port, 90);
     if (!ok) {
       log("server did not start in time");
-      message(`KPR Pitstop could not start.\n\nSee the log file:\n${path.join(LOGS, "server.log")}`);
+      message(`Spoaxio Software could not start.\n\nSee the log file:\n${path.join(LOGS, "server.log")}`);
       return;
     }
   }
@@ -179,7 +179,7 @@ async function resetPassword() {
   const appRequire = require("node:module").createRequire(path.join(APP, "server.js"));
   process.env.DATABASE_URL = `file:${path.join(DATA, "kpr.db").replace(/\\/g, "/")}`;
   if (!fs.existsSync(path.join(DATA, "kpr.db"))) {
-    console.log("\n  No KPR data found on this PC yet. Open KPR Pitstop once to set it up.\n");
+    console.log("\n  No shop data found on this PC yet. Open Spoaxio Software once to set it up.\n");
     return pause();
   }
   const { PrismaClient } = appRequire("@prisma/client");
@@ -189,10 +189,10 @@ async function resetPassword() {
   const db = new PrismaClient();
   const io = prompter();
   try {
-    console.log("\n  ===== KPR Pitstop - reset a login password =====\n");
+    console.log("\n  ===== Spoaxio Software - reset a login password =====\n");
     const users = await db.user.findMany({ orderBy: [{ role: "asc" }, { name: "asc" }] });
     if (!users.length) {
-      console.log("  No logins exist yet. Open KPR Pitstop to create the owner account.");
+      console.log("  No logins exist yet. Open Spoaxio Software to create the owner account.");
       return;
     }
     console.log("  Logins on this PC:\n");
@@ -241,5 +241,5 @@ function pause() {
 
 main().catch((e) => {
   log(`launcher error: ${e && e.stack}`);
-  message(`KPR Pitstop error: ${e && e.message}`);
+  message(`Spoaxio Software error: ${e && e.message}`);
 });
