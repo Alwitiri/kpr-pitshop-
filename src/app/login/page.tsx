@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { login } from "@/actions/auth";
 import { ActionForm, PasswordInput, Submit } from "@/components/forms";
 import { BrandMark } from "@/components/brand";
+import { MadeBy } from "@/components/made-by";
 import { getSettings } from "@/lib/server-utils";
 import { logoUrl } from "@/lib/branding";
 
@@ -49,6 +50,7 @@ export default async function LoginPage() {
             </ul>
           </details>
         </div>
+        <MadeBy className="mt-6" />
       </div>
     </main>
   );

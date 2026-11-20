@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { firstRunSetup } from "@/actions/setup";
 import { ActionForm, PasswordInput, Submit } from "@/components/forms";
+import { MadeBy } from "@/components/made-by";
 import { ImageInput } from "@/components/image-input";
 
 // Must check the live database on every request (never pre-rendered at build time)
@@ -45,6 +46,7 @@ export default async function SetupPage() {
             <Submit className="btn-primary w-full">Start using the software</Submit>
           </ActionForm>
         </div>
+        <MadeBy className="mt-6" />
       </div>
     </main>
   );
