@@ -43,7 +43,7 @@ export function AutoList({ items, cloudOn, sentToday }: { items: Item[]; cloudOn
           <h2 className="text-[0.95rem] font-semibold text-gray-950">Automatic sending {cloudOn ? <span className="badge ml-1 bg-emerald-50 text-emerald-700">On</span> : <span className="badge ml-1 bg-gray-100 text-gray-600">Off</span>}</h2>
           <p className="text-xs text-gray-600">
             {sentToday} sent today · {scheduled.length} scheduled · {waiting.length} waiting · {failed.length} failed
-            {!cloudOn && items.length > 0 && " – switch automatic mode back on to send the waiting ones"}
+            {!cloudOn && waiting.length + scheduled.length > 0 && " – switch automatic mode back on to send the waiting ones"}
           </p>
         </div>
         <Link href="/whatsapp/settings" className="btn-ghost btn-sm">Settings</Link>
