@@ -65,12 +65,20 @@ export function ActionForm({
       }}
     >
       <PendingContext.Provider value={pending}>{children}</PendingContext.Provider>
-      {state?.error && (
-        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</div>
-      )}
-      {state?.ok && (
-        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{state.ok}</div>
-      )}
+      <div aria-live="polite">
+        {state?.error && (
+          <div role="alert" className="page-enter mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+            <span>{state.error}</span>
+          </div>
+        )}
+        {state?.ok && (
+          <div role="status" className="page-enter mt-3 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6 9 17l-5-5" /></svg>
+            <span>{state.ok}</span>
+          </div>
+        )}
+      </div>
     </form>
   );
 }
@@ -98,11 +106,20 @@ export function Submit({
       value={value}
       className={className}
       disabled={pending}
+      aria-busy={pending || undefined}
       onClick={(e) => {
         if (confirm && !window.confirm(confirm)) e.preventDefault();
       }}
     >
-      {pending ? "Saving…" : children}
+      {pending ? (
+        <>
+          <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin-fast" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+            <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+          Saving…
+        </>
+      ) : children}
     </button>
   );
 }
@@ -122,10 +139,10 @@ export function Toggle({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
-      <button type="button" className={className} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className={className} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         {open ? "Close" : label}
       </button>
-      {open && <div className="mt-3">{children}</div>}
+      {open && <div className="page-enter mt-3">{children}</div>}
     </div>
   );
 }
@@ -166,5 +183,30 @@ export function ExportCsv({
     >
       {label}
     </button>
+  );
+}
+
+/** Password box with a show / hide button (helps on shop counters and phones). */
+export function PasswordInput({ name = "password", autoComplete = "current-password", required = true, minLength }: { name?: string; autoComplete?: string; required?: boolean; minLength?: number }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input name={name} type={show ? "text" : "password"} className="input pr-11" autoComplete={autoComplete} required={required} minLength={minLength} />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-lg text-gray-400 hover:text-gray-700"
+        aria-label={show ? "Hide password" : "Show password"}
+        aria-pressed={show}
+      >
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          {show ? (
+            <><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.2 3.2" /><path d="m1 1 22 22" /></>
+          ) : (
+            <><path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z" /><circle cx="12" cy="12" r="3" /></>
+          )}
+        </svg>
+      </button>
+    </div>
   );
 }

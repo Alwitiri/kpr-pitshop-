@@ -2,16 +2,19 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db, like } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
+import { SEGMENTS, SEGMENT_ORDER, segmentOf, type Segment } from "@/lib/crm";
 import { customerDues } from "@/lib/queries";
 import { fmtDate, money } from "@/lib/format";
 import { Empty, FilterBar, PageHeader, Pager, Stat, TableWrap, qs } from "@/components/ui";
 import { ExportCsv } from "@/components/forms";
+import { Icon } from "@/components/icons";
 
 export const metadata = { title: "Customers" };
 const PER = 50;
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  await requirePage("customers");
+  const session = await requirePage("customers");
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const where: Prisma.CustomerWhereInput = {};
@@ -39,13 +42,18 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     _sum: { total: true, returnedAmount: true },
     _count: true,
     _max: { date: true },
+    _min: { date: true },
   });
   const statMap = new Map(stats.map((s) => [s.customerId, s]));
 
   let rows = customers.map((c) => {
     const st = statMap.get(c.id);
-    return { ...c, due: dueMap.get(c.id) ?? 0, spent: (st?._sum.total ?? 0) - (st?._sum.returnedAmount ?? 0), visits: st?._count ?? 0, lastVisit: st?._max.date ?? null };
+    const spent = (st?._sum.total ?? 0) - (st?._sum.returnedAmount ?? 0);
+    const visits = st?._count ?? 0;
+    const lastVisit = st?._max.date ?? null;
+    return { ...c, due: dueMap.get(c.id) ?? 0, spent, visits, lastVisit, segment: segmentOf({ visits, spent, first: st?._min.date ?? null, last: lastVisit }) };
   });
+  if (sp.segment && sp.segment in SEGMENTS) rows = rows.filter((r) => r.segment === (sp.segment as Segment));
   if (sp.dues === "yes") rows = rows.filter((r) => r.due > 0.5);
   if (sp.inactive) {
     const cutoff = Date.now() - Number(sp.inactive) * 864e5;
@@ -62,9 +70,11 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         subtitle="CRM – customers, vehicles and purchase history"
         actions={
           <>
+            {can(session.role, "reports") && <Link href="/customers/insights" className="btn-outline">Insights</Link>}
+            {can(session.role, "importData") && <Link href="/customers/import" className="btn-outline">Import</Link>}
             <ExportCsv
               filename="customers.csv"
-              rows={[["Name", "Phone", "Vehicles", "Tags", "WhatsApp opt-in", "Opt-in date", "Visits", "Total spent", "Last visit", "Due"], ...rows.map((r) => [r.name, r.phone, r.vehicles.map((v) => `${v.make} ${v.model ?? ""} ${v.regNo ?? ""}`).join("; "), r.tags, r.whatsappOptIn ? "Yes" : "No", fmtDate(r.optInAt), r.visits, r.spent, fmtDate(r.lastVisit), r.due])]}
+              rows={[["Name", "Phone", "Vehicles", "Tags", "Segment", "WhatsApp opt-in", "Opt-in date", "Visits", "Total spent", "Last visit", "Due"], ...rows.map((r) => [r.name, r.phone, r.vehicles.map((v) => `${v.make} ${v.model ?? ""} ${v.regNo ?? ""}`).join("; "), r.tags, SEGMENTS[r.segment].label, r.whatsappOptIn ? "Yes" : "No", fmtDate(r.optInAt), r.visits, r.spent, fmtDate(r.lastVisit), r.due])]}
             />
             <Link href="/customers/new" className="btn-primary">+ New customer</Link>
           </>
@@ -85,21 +95,23 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         <label><span className="label">WhatsApp</span><select name="optin" defaultValue={sp.optin ?? ""} className="input"><option value="">Any</option><option value="yes">Opted in</option><option value="no">Not opted in</option></select></label>
         <label><span className="label">Dues</span><select name="dues" defaultValue={sp.dues ?? ""} className="input"><option value="">Any</option><option value="yes">Has dues</option></select></label>
         <label><span className="label">Not visited</span><select name="inactive" defaultValue={sp.inactive ?? ""} className="input"><option value="">—</option><option value="30">30+ days</option><option value="60">60+ days</option><option value="90">90+ days</option></select></label>
+        <label><span className="label">Segment</span><select name="segment" defaultValue={sp.segment ?? ""} className="input"><option value="">Any</option>{SEGMENT_ORDER.map((k) => <option key={k} value={k}>{SEGMENTS[k].label}</option>)}</select></label>
         <label><span className="label">Sort</span><select name="sort" defaultValue={sp.sort ?? ""} className="input"><option value="">Name</option><option value="spent">Top spenders</option><option value="recent">Recent visit</option></select></label>
       </FilterBar>
       <div className="card">
         <TableWrap>
           <table className="table">
-            <thead><tr><th>Customer</th><th>Vehicles</th><th>Tags</th><th className="text-right">Visits</th><th className="text-right">Spent</th><th>Last visit</th><th className="text-right">Due</th></tr></thead>
+            <thead><tr><th>Customer</th><th>Vehicles</th><th>Tags</th><th>Segment</th><th className="text-right">Visits</th><th className="text-right">Spent</th><th>Last visit</th><th className="text-right">Due</th></tr></thead>
             <tbody>
               {pageRows.map((c) => (
                 <tr key={c.id}>
                   <td>
                     <Link className="link" href={`/customers/${c.id}`}>{c.name}</Link>
-                    <div className="text-xs text-gray-500">{c.phone}{c.whatsappOptIn && <span className="ml-1 text-emerald-600">· WA ✓</span>}</div>
+                    <div className="text-xs text-gray-500">{c.phone}{c.whatsappOptIn && <span className="ml-1.5 inline-flex items-center gap-0.5 font-medium text-emerald-700" title="Agreed to WhatsApp messages"><Icon name="chat" className="h-3 w-3" />WA</span>}</div>
                   </td>
                   <td className="text-xs">{c.vehicles.map((v) => <div key={v.id}>{v.make} {v.model} {v.regNo && <span className="text-gray-500">· {v.regNo}</span>}</div>)}</td>
                   <td className="text-xs text-gray-600">{c.tags}</td>
+                  <td><span className={`badge ${SEGMENTS[c.segment].cls}`}>{SEGMENTS[c.segment].label}</span></td>
                   <td className="text-right tabular-nums">{c.visits}</td>
                   <td className="text-right tabular-nums">{money(c.spent)}</td>
                   <td className="text-xs">{fmtDate(c.lastVisit)}</td>

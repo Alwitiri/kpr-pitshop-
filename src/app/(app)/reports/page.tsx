@@ -255,7 +255,7 @@ function ReportShell({ sp, type, from, to, presets, stats = [], hideDates, child
 }) {
   return (
     <>
-      <PageHeader title="Reports" subtitle={hideDates ? undefined : `${fmtDate(`${from}T12:00:00+05:30`)} – ${fmtDate(`${to}T12:00:00+05:30`)}`} actions={<PrintButton />} />
+      <PageHeader title="Reports" subtitle={hideDates ? undefined : `${fmtDate(`${from}T12:00:00+05:30`)} – ${fmtDate(`${to}T12:00:00+05:30`)}`} actions={<><Link href="/customers/insights" className="btn-outline">Customer insights</Link><PrintButton /></>} />
       <div className="mb-4 flex flex-wrap gap-1.5 no-print">
         {TABS.map(([k, l]) => (
           <Link key={k} href={`/reports?type=${k}${sp.from ? `&from=${sp.from}` : ""}${sp.to ? `&to=${sp.to}` : ""}`} className={k === type ? "btn-dark btn-sm" : "btn-outline btn-sm"}>{l}</Link>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
-import { ROLE_LABEL } from "@/lib/roles";
+import { DEFAULT_PERMS, PERM_GROUPS, ROLE_LABEL, permsFor } from "@/lib/roles";
 import { dayRange, fmtDate, money, monthStart, ymd } from "@/lib/format";
 import { Badge, PageHeader, Section, TableWrap } from "@/components/ui";
 import { Toggle } from "@/components/forms";
@@ -9,16 +9,10 @@ import { UserForm } from "@/components/user-form";
 
 export const metadata = { title: "Staff" };
 
-const PERMS: [string, string][] = [
-  ["Owner", "Everything, including staff, settings, profit and cancelling bills"],
-  ["Manager", "Billing, stock, purchases, customers, expenses, reports, cancel bills"],
-  ["Cashier", "POS billing, sales, customers, job cards"],
-  ["Inventory Staff", "Products, stock, purchases, suppliers"],
-  ["Technician", "Job cards assigned to them"],
-];
 
 export default async function StaffPage() {
-  await requirePage("staff");
+  const session = await requirePage("staff");
+  const permLabel = new Map(PERM_GROUPS.flatMap((g) => g.perms.map(([p, l]) => [p as string, l])));
   const today = ymd();
   const [users, todaySales, monthSales, att] = await Promise.all([
     db.user.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
@@ -35,7 +29,7 @@ export default async function StaffPage() {
       <PageHeader
         title="Staff"
         subtitle="Logins, roles, attendance and performance"
-        actions={<><Link href="/staff/activity" className="btn-outline">Activity log</Link><Link href="/staff/attendance" className="btn-primary">Attendance</Link></>}
+        actions={<>{session.role === "OWNER" && <Link href="/staff/permissions" className="btn-outline">Permissions</Link>}<Link href="/staff/activity" className="btn-outline">Activity log</Link><Link href="/staff/attendance" className="btn-primary">Attendance</Link></>}
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <div className="card">
@@ -61,8 +55,13 @@ export default async function StaffPage() {
         </div>
         <div className="space-y-5">
           <Section title="Add staff member"><UserForm /></Section>
-          <Section title="What each role can do">
-            <ul className="space-y-2 text-sm">{PERMS.map(([r, d]) => <li key={r}><b>{r}:</b> <span className="text-gray-600">{d}</span></li>)}</ul>
+          <Section title="What each role can do" actions={session.role === "OWNER" ? <Link href="/staff/permissions" className="link text-xs">Change</Link> : undefined}>
+            <ul className="space-y-2 text-sm">
+              <li><b>Owner:</b> <span className="text-gray-600">Everything</span></li>
+              {Object.keys(DEFAULT_PERMS).map((r) => (
+                <li key={r}><b>{ROLE_LABEL[r]}:</b> <span className="text-gray-600">{permsFor(r).filter((p) => p !== "dashboard").map((p) => permLabel.get(p) ?? p).join(", ") || "Dashboard only"}</span></li>
+              ))}
+            </ul>
           </Section>
         </div>
       </div>

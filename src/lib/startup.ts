@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "./db";
 import { applyMigrations } from "./migrate";
 import { autoBackupIfDue } from "./backup";
+import { runScheduledRules } from "./workflows";
 
 let started = false;
 
@@ -16,7 +17,11 @@ export async function startup() {
   const settings = await db.shopSettings.findUnique({ where: { id: 1 } });
   if (!settings) await db.shopSettings.create({ data: { id: 1 } });
 
-  const tick = () => autoBackupIfDue().catch((e) => console.error("[kpr] backup failed", e));
+  const tick = () => {
+    autoBackupIfDue().catch((e) => console.error("[kpr] backup failed", e));
+    // Birthday / warranty / inactive-customer follow-ups
+    runScheduledRules(true).catch((e) => console.error("[kpr] workflows failed", e));
+  };
   setTimeout(tick, 15_000);
   setInterval(tick, 60 * 60 * 1000).unref();
 }

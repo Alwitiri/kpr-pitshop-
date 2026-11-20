@@ -6,6 +6,7 @@ import { ProductPicker, type PickProduct } from "@/components/product-picker";
 import { calcBill } from "@/lib/calc";
 import { money, round2 } from "@/lib/format";
 import { createSale, deleteHeldBill, holdBill, listHeldBills, searchCustomers } from "@/actions/sales";
+import { Icon } from "@/components/icons";
 
 type Line = { productId: number | null; name: string; hsn?: string | null; qty: number; unitPrice: number; discount: number; gstRate: number; stock: number };
 type Vehicle = { id: number; type: string; make: string; model: string | null; regNo: string | null };
@@ -237,7 +238,7 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
                       )}
                     </td>
                     <td className="text-right font-semibold tabular-nums">{money(bill.lines[i]?.total ?? 0)}</td>
-                    <td><button className="text-gray-400 hover:text-red-600" aria-label="Remove" onClick={() => setLines(lines.filter((_, j) => j !== i))}>✕</button></td>
+                    <td><button className="grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Remove line" title="Remove line" onClick={() => setLines(lines.filter((_, j) => j !== i))}><Icon name="x" className="h-4 w-4" /></button></td>
                   </tr>
                 ))}
               </tbody>
@@ -300,7 +301,7 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <span className="label mb-0">Payment</span>
-            <button className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setPays([...pays, { method: "UPI", amount: 0 }])}>+ Split payment</button>
+            <button className="text-xs font-medium text-link hover:underline" onClick={() => setPays([...pays, { method: "UPI", amount: 0 }])}>+ Split payment</button>
           </div>
           <div className="space-y-2">
             {pays.map((p, i) => (
@@ -314,7 +315,7 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
                 </div>
                 <input type="number" min={0} className="input py-1 text-right" placeholder="Amount" value={p.amount || ""} onChange={(e) => setPays(pays.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))} />
                 <button className="btn-outline btn-sm" title="Fill remaining" onClick={() => fillRemaining(i)}>Full</button>
-                {pays.length > 1 && <button className="px-1 text-gray-400 hover:text-red-600" onClick={() => setPays(pays.filter((_, j) => j !== i))}>✕</button>}
+                {pays.length > 1 && <button className="grid h-9 w-9 place-items-center rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="Remove payment" onClick={() => setPays(pays.filter((_, j) => j !== i))}><Icon name="x" className="h-4 w-4" /></button>}
               </div>
             ))}
           </div>
@@ -336,7 +337,7 @@ export function PosScreen({ products, canEditPrice, canAddProduct, preload, shop
       {done && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="card w-full max-w-sm p-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-700">✓</div>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Icon name="check" className="h-6 w-6" /></div>
             <h2 className="text-lg font-bold">Sale complete</h2>
             <p className="text-sm text-gray-500">Invoice {done.invoiceNo} · {money(done.total)}</p>
             {done.change > 0 && <p className="mt-2 text-lg font-bold text-emerald-700">Give change: {money(done.change)}</p>}
@@ -382,7 +383,7 @@ function CustomerBox({
         <div className="flex items-start justify-between">
           <div>
             <Link href={`/customers/${customer.id}`} target="_blank" className="font-semibold hover:underline">{customer.name}</Link>
-            <div className="text-xs text-gray-500">{customer.phone}{customer.whatsappOptIn && " · WhatsApp ✓"}</div>
+            <div className="text-xs text-gray-500">{customer.phone}{customer.whatsappOptIn && <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-emerald-700"><Icon name="chat" className="h-3 w-3" />WhatsApp</span>}</div>
           </div>
           <button className="text-xs text-gray-500 hover:text-red-600" onClick={() => setCustomer(null)}>Change</button>
         </div>
@@ -424,7 +425,7 @@ function CustomerBox({
     <div className="relative rounded-xl border border-gray-200 p-3">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="label mb-0">Customer</span>
-        <button className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setNewCust({ name: "", phone: q.match(/^\d+$/) ? q : "", whatsappOptIn: false, vType: "BIKE", make: "", model: "", regNo: "" })}>
+        <button className="text-xs font-medium text-link hover:underline" onClick={() => setNewCust({ name: "", phone: q.match(/^\d+$/) ? q : "", whatsappOptIn: false, vType: "BIKE", make: "", model: "", regNo: "" })}>
           + New customer
         </button>
       </div>

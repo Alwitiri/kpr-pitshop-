@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { firstRunSetup } from "@/actions/setup";
-import { ActionForm, Submit } from "@/components/forms";
+import { ActionForm, PasswordInput, Submit } from "@/components/forms";
 import { ImageInput } from "@/components/image-input";
 
 // Must check the live database on every request (never pre-rendered at build time)
@@ -38,8 +38,8 @@ export default async function SetupPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label><span className="label">Owner name *</span><input name="name" className="input" required /></label>
               <label><span className="label">Username *</span><input name="username" className="input lowercase" defaultValue="owner" required /></label>
-              <label><span className="label">Password *</span><input name="password" type="password" minLength={6} className="input" autoComplete="new-password" required /></label>
-              <label><span className="label">Confirm password *</span><input name="confirm" type="password" minLength={6} className="input" autoComplete="new-password" required /></label>
+              <label><span className="label">Password *</span><PasswordInput autoComplete="new-password" minLength={6} /></label>
+              <label><span className="label">Confirm password *</span><PasswordInput name="confirm" autoComplete="new-password" minLength={6} /></label>
             </div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="categories" defaultChecked className="h-4 w-4" /> Add standard bike & car accessory categories</label>
             <Submit className="btn-primary w-full">Start using the software</Submit>

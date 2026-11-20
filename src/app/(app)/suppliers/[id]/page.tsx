@@ -9,6 +9,11 @@ import { SupplierForm } from "@/components/supplier-form";
 import { PaymentForm } from "@/components/payment-form";
 import { addSupplierPayment } from "@/actions/purchases";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const r = await db.supplier.findUnique({ where: { id: Number((await params).id) || 0 }, select: { name: true } });
+  return { title: r?.name ?? "Supplier" };
+}
+
 export default async function SupplierPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePage("suppliers");
   const id = Number((await params).id);

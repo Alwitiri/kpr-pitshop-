@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAction } from "@/lib/auth";
+import { parseCsv } from "@/lib/csv";
+import { can } from "@/lib/roles";
 import { audit, bool, errMsg, generateBarcode, generateSku, moveStock, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
 import { cleanCode } from "@/lib/barcode";
 import { saveUpload } from "@/lib/storage";
@@ -165,32 +167,10 @@ export async function deleteMaster(fd: FormData) {
 }
 
 // ── CSV import ──
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [], cell = "", q = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) {
-      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
-      else if (c === '"') q = false;
-      else cell += c;
-    } else if (c === '"') q = true;
-    else if (c === ",") { row.push(cell); cell = ""; }
-    else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(cell); cell = "";
-      if (row.some((x) => x.trim())) rows.push(row);
-      row = [];
-    } else cell += c;
-  }
-  row.push(cell);
-  if (row.some((x) => x.trim())) rows.push(row);
-  return rows;
-}
-
 export async function importProducts(_: ActionResult, fd: FormData): Promise<ActionResult> {
   try {
     const s = await requireAction("products");
+    if (!can(s.role, "importData")) return { error: "You do not have permission to import data." };
     const file = fd.get("file") as File | null;
     if (!file || file.size === 0) return { error: "Choose a CSV file (save your Excel sheet as CSV)." };
     const rows = parseCsv((await file.text()).replace(/^﻿/, ""));

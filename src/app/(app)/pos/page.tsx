@@ -35,7 +35,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   return (
     <PosScreen
       products={products}
-      canEditPrice={s.role === "OWNER" || s.role === "MANAGER"}
+      canEditPrice={can(s.role, "editPrice")}
       canAddProduct={can(s.role, "products")}
       preload={preload}
       shopState={settings.stateName}

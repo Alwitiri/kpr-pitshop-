@@ -169,7 +169,7 @@ export function LabelPrinter({ products, initial, shopName, missingBarcodes }: {
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="label mb-0">Products</span>
               <span className="flex gap-2">
-                <button className="text-xs text-brand-700 hover:underline" onClick={() => setCounts(Object.fromEntries(filtered.filter((p) => p.stock > 0).map((p) => [p.id, Math.round(p.stock)])))}>
+                <button className="text-xs font-medium text-link hover:underline" onClick={() => setCounts(Object.fromEntries(filtered.filter((p) => p.stock > 0).map((p) => [p.id, Math.round(p.stock)])))}>
                   Qty = stock (shown)
                 </button>
                 <button className="text-xs text-gray-500 hover:underline" onClick={() => setCounts({})}>Clear</button>

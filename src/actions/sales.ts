@@ -5,6 +5,7 @@ import { db, like } from "@/lib/db";
 import { requireAction } from "@/lib/auth";
 import { can, type Module } from "@/lib/roles";
 import { calcBill, saleStatus, type CartLine } from "@/lib/calc";
+import { closePaidFollowUps, fireEvent } from "@/lib/workflows";
 import { round2, parseDay } from "@/lib/format";
 import { audit, errMsg, getSettings, moveStock, nextNumber, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
 
@@ -164,6 +165,17 @@ export async function createSale(payload: SalePayload): Promise<{ ok?: boolean; 
     });
 
     await audit(s.uid, "SALE_CREATED", "Sale", sale.id, `${sale.invoiceNo} ₹${sale.total}`);
+    // Workflow automation (feedback calls, payment reminders, next service…)
+    if (sale.customerId) {
+      const base = { customerId: sale.customerId, vehicleId: sale.vehicleId, refType: "Sale", refId: sale.id, invoice: sale.invoiceNo };
+      await fireEvent("SALE_CREATED", { ...base, amount: sale.total });
+      const due = round2(sale.total - sale.paidAmount);
+      if (due > 0.5) await fireEvent("PAYMENT_DUE", { ...base, amount: due });
+      if (payload.jobCardId) {
+        const job = await db.jobCard.findUnique({ where: { id: payload.jobCardId }, select: { number: true, vehicleId: true } });
+        await fireEvent("JOB_DELIVERED", { customerId: sale.customerId, vehicleId: job?.vehicleId ?? sale.vehicleId, refType: "JobCard", refId: payload.jobCardId, job: job?.number });
+      }
+    }
     revalidatePath("/sales");
     revalidatePath("/");
     return { ok: true, saleId: sale.id, invoiceNo: sale.invoiceNo };
@@ -218,6 +230,7 @@ export async function addSalePayment(_: ActionResult, fd: FormData): Promise<Act
       await tx.sale.update({ where: { id: saleId }, data: { paidAmount: paid, status: saleStatus(sale.total - sale.returnedAmount, paid) } });
     });
     await audit(s.uid, "SALE_PAYMENT", "Sale", saleId, String(amount));
+    await closePaidFollowUps(sale.customerId, [saleId]);
     revalidatePath(`/sales/${saleId}`);
     return { ok: "Payment received." };
   } catch (e) {
@@ -251,6 +264,7 @@ export async function receiveCustomerPayment(_: ActionResult, fd: FormData): Pro
       }
     });
     await audit(s.uid, "CUSTOMER_PAYMENT", "Customer", customerId, `${num(fd, "amount")} ${method}`);
+    await closePaidFollowUps(customerId);
     revalidatePath(`/customers/${customerId}`);
     return { ok: "Payment received and applied to oldest bills." };
   } catch (e) {
@@ -261,7 +275,7 @@ export async function receiveCustomerPayment(_: ActionResult, fd: FormData): Pro
 export async function cancelSale(_: ActionResult, fd: FormData): Promise<ActionResult> {
   try {
     const s = await requireAction("sales");
-    if (!["OWNER", "MANAGER"].includes(s.role)) return { error: "Only the owner or manager can cancel a bill." };
+    if (!can(s.role, "manageSales")) return { error: "You do not have permission to cancel bills." };
     const saleId = optInt(fd, "saleId");
     const reason = str(fd, "reason");
     if (!saleId || !reason) return { error: "Enter a reason for cancelling." };
@@ -279,6 +293,8 @@ export async function cancelSale(_: ActionResult, fd: FormData): Promise<ActionR
       if (sale.jobCardId) await tx.jobCard.update({ where: { id: sale.jobCardId }, data: { status: "COMPLETED", deliveredAt: null } });
     });
     await audit(s.uid, "SALE_CANCELLED", "Sale", saleId, reason);
+    // Follow-ups created for this bill (feedback, payment…) are no longer needed
+    await db.followUp.updateMany({ where: { status: "OPEN", refType: "Sale", refId: saleId }, data: { status: "SKIPPED", outcome: "Bill cancelled", doneAt: new Date() } });
     revalidatePath(`/sales/${saleId}`);
     return { ok: "Bill cancelled. Stock restored." };
   } catch (e) {

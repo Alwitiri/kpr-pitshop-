@@ -10,14 +10,19 @@ const SERIES = "#2a78d6"; // categorical slot 1 (validated default palette)
 export function BarChart({
   data,
   height = 180,
-  format = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`,
+  format: formatProp,
+  kind = "money",
   labelEvery,
 }: {
   data: Bar[];
   height?: number;
   format?: (n: number) => string;
+  /** Use "count" from server components (functions cannot be passed to the client). */
+  kind?: "money" | "count";
   labelEvery?: number;
 }) {
+  const format =
+    formatProp ?? (kind === "count" ? (n: number) => Math.round(n).toLocaleString("en-IN") : (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`);
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(1, ...data.map((d) => d.value));
   const nice = niceMax(max);

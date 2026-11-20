@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { lookupCode, type ScanResult } from "@/actions/scan";
+import { Icon } from "./icons";
 
 /**
  * USB / Bluetooth barcode scanners act like a very fast keyboard that ends with Enter.
@@ -74,7 +75,7 @@ export function ScanListener({ canProducts, canSales }: { canProducts: boolean; 
   if (!toast) return null;
   return (
     <div className="fixed bottom-4 right-4 z-[60] w-80 rounded-xl border border-gray-200 bg-white p-4 shadow-xl no-print">
-      <button className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setToast(null)} aria-label="Close">✕</button>
+      <button className="absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700" onClick={() => setToast(null)} aria-label="Close"><Icon name="x" className="h-4 w-4" /></button>
       {toast.type === "product" && (
         <>
           <div className="text-xs font-semibold uppercase text-gray-500">Scanned product</div>

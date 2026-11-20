@@ -2,13 +2,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
-import { canSeeProfit } from "@/lib/roles";
+import { can, canSeeProfit } from "@/lib/roles";
 import { fmtDate, fmtDateTime, money, qty, round2 } from "@/lib/format";
 import { label } from "@/lib/calc";
 import { Badge, PageHeader, Section, TableWrap } from "@/components/ui";
 import { ActionForm, Submit, Toggle } from "@/components/forms";
 import { PaymentForm } from "@/components/payment-form";
 import { addSalePayment, cancelSale, createSaleReturn } from "@/actions/sales";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const r = await db.sale.findUnique({ where: { id: Number((await params).id) || 0 }, select: { invoiceNo: true } });
+  return { title: r?.invoiceNo ?? "Invoice" };
+}
 
 export default async function SalePage({ params }: { params: Promise<{ id: string }> }) {
   const s = await requirePage("sales");
@@ -29,7 +34,7 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
   const net = round2(sale.total - sale.returnedAmount);
   const due = sale.status === "CANCELLED" ? 0 : round2(net - sale.paidAmount);
   const profit = canSeeProfit(s.role);
-  const canManage = s.role === "OWNER" || s.role === "MANAGER";
+  const canManage = can(s.role, "manageSales");
   const returnable = sale.items.filter((i) => i.qty - i.returnedQty > 0);
 
   return (

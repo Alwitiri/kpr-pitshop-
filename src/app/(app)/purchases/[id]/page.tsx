@@ -8,6 +8,11 @@ import { ActionForm, PrintButton, Submit, Toggle } from "@/components/forms";
 import { PaymentForm } from "@/components/payment-form";
 import { addSupplierPayment, createPurchaseReturn } from "@/actions/purchases";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const r = await db.purchase.findUnique({ where: { id: Number((await params).id) || 0 }, select: { number: true } });
+  return { title: r?.number ?? "Purchase" };
+}
+
 export default async function PurchasePage({ params }: { params: Promise<{ id: string }> }) {
   await requirePage("purchases");
   const id = Number((await params).id);

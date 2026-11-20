@@ -2,7 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
-import { can, type Module } from "./roles";
+import { can, type Perm } from "./roles";
+import { loadPermissions } from "./permissions";
 
 const COOKIE = "kpr_session";
 const secret = new TextEncoder().encode(
@@ -48,17 +49,19 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /** For pages: redirect to login / dashboard when not allowed. */
-export async function requirePage(module?: Module): Promise<Session> {
+export async function requirePage(module?: Perm): Promise<Session> {
   const s = await getSession();
   if (!s) redirect("/login");
+  await loadPermissions();
   if (module && !can(s.role, module)) redirect("/?denied=" + module);
   return s;
 }
 
 /** For server actions: throw when not allowed. */
-export async function requireAction(module?: Module): Promise<Session> {
+export async function requireAction(module?: Perm): Promise<Session> {
   const s = await getSession();
   if (!s) throw new Error("Your session has expired. Please log in again.");
+  await loadPermissions();
   if (module && !can(s.role, module)) throw new Error("You do not have permission for this action.");
   return s;
 }

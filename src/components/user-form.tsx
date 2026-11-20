@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionForm, Submit } from "./forms";
+import { ActionForm, PasswordInput, Submit } from "./forms";
 import { saveUser } from "@/actions/staff";
 import { ROLES, ROLE_LABEL } from "@/lib/roles";
 
@@ -20,7 +20,7 @@ export function UserForm({ u }: { u?: U }) {
         <label><span className="label">Phone</span><input name="phone" className="input" defaultValue={u?.phone ?? ""} /></label>
         <label className="sm:col-span-2">
           <span className="label">{u?.id ? "New password (leave empty to keep)" : "Password"}</span>
-          <input name="password" type="password" className="input" autoComplete="new-password" required={!u?.id} minLength={6} />
+          <PasswordInput autoComplete="new-password" required={!u?.id} minLength={6} />
         </label>
       </div>
       {u?.id && <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={u.active} className="h-4 w-4" /> Active (can log in)</label>}

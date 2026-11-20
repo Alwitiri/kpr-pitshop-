@@ -2,7 +2,6 @@
 // SQLite – one data file on the shop PC, works fully offline.
 // Schema changes: edit this file, then run `npm run migration:new <name>`.
 
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -30,6 +29,7 @@ model User {
   jobCards       JobCard[]       @relation("Technician")
   stockMovements StockMovement[]
   expenses       Expense[]
+  followUps      FollowUp[]      @relation("FollowUpAssignee")
 }
 
 model Attendance {
@@ -73,6 +73,12 @@ model ShopSettings {
   bankDetails     String? @default("")
   upiId           String? @default("")
   logoFile        String? // file name inside data/branding – each shop uploads its own logo
+}
+
+// Owner-editable permissions for each role (JSON list of modules / abilities).
+model RolePermission {
+  role  String @id
+  perms String // JSON: ["pos","sales","profit",...]
 }
 
 model Counter {
@@ -273,12 +279,71 @@ model Customer {
   optInSource    String?
   createdAt      DateTime  @default(now())
 
-  vehicles Vehicle[]
-  sales    Sale[]
-  payments Payment[]
-  jobCards JobCard[]
+  vehicles     Vehicle[]
+  sales        Sale[]
+  payments     Payment[]
+  jobCards     JobCard[]
+  followUps    FollowUp[]
+  interactions CustomerInteraction[]
 
   @@index([name])
+}
+
+// A task to contact a customer: created by hand or by a workflow rule.
+model FollowUp {
+  id           Int           @id @default(autoincrement())
+  customerId   Int?
+  vehicleId    Int?
+  type         String // CALL | FEEDBACK | SERVICE_DUE | PAYMENT | BIRTHDAY | WARRANTY | WIN_BACK | OTHER
+  title        String
+  notes        String?
+  dueDate      DateTime
+  status       String        @default("OPEN") // OPEN | DONE | SKIPPED
+  outcome      String?
+  assignedToId Int?
+  ruleId       Int?
+  refType      String? // Sale | JobCard | SaleItem
+  refId        Int?
+  dedupeKey    String?       @unique // stops a rule creating the same task twice
+  createdById  Int?
+  doneAt       DateTime?
+  doneById     Int?
+  createdAt    DateTime      @default(now())
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedTo   User?         @relation("FollowUpAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  rule         WorkflowRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  @@index([status, dueDate])
+  @@index([customerId])
+}
+
+// Log of every call, visit, complaint or note with a customer.
+model CustomerInteraction {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  type       String // CALL | VISIT | WHATSAPP | COMPLAINT | NOTE
+  note       String
+  userId     Int?
+  userName   String?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+}
+
+// Automation: when something happens, create a follow-up task.
+model WorkflowRule {
+  id           Int        @id @default(autoincrement())
+  name         String
+  trigger      String // SALE_CREATED | PAYMENT_DUE | JOB_COMPLETED | JOB_DELIVERED | BIRTHDAY | WARRANTY_EXPIRING | INACTIVE_CUSTOMER
+  delayDays    Int        @default(0)
+  followUpType String     @default("CALL")
+  title        String // may use {customer} {vehicle} {invoice} {job} {amount} {item}
+  minAmount    Float      @default(0)
+  assignUserId Int?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  followUps    FollowUp[]
 }
 
 model Vehicle {
@@ -299,33 +364,33 @@ model Vehicle {
 // ───────────────────────────── Sales ─────────────────────────────
 
 model Sale {
-  id            Int       @id @default(autoincrement())
-  invoiceNo     String    @unique
-  customerId    Int?
-  vehicleId     Int?
-  customerName  String? // walk-in name
-  customerPhone String?
-  date          DateTime  @default(now())
-  subtotal      Float // gross of line amounts incl. GST before bill discount
-  discount      Float     @default(0) // bill-level + line discounts
-  taxableValue  Float
-  cgst          Float     @default(0)
-  sgst          Float     @default(0)
-  igst          Float     @default(0)
-  taxTotal      Float
-  roundOff      Float     @default(0)
-  total         Float
-  paidAmount    Float     @default(0) // sum of payments (refunds are negative)
-  returnedAmount Float    @default(0) // value of goods returned
-  costTotal     Float     @default(0)
-  interState    Boolean   @default(false)
-  status        String    @default("PAID") // PAID | PARTIAL | UNPAID | CANCELLED
-  notes         String?
-  userId        Int?
-  jobCardId     Int?      @unique
-  cancelledAt   DateTime?
-  cancelReason  String?
-  createdAt     DateTime  @default(now())
+  id             Int       @id @default(autoincrement())
+  invoiceNo      String    @unique
+  customerId     Int?
+  vehicleId      Int?
+  customerName   String? // walk-in name
+  customerPhone  String?
+  date           DateTime  @default(now())
+  subtotal       Float // gross of line amounts incl. GST before bill discount
+  discount       Float     @default(0) // bill-level + line discounts
+  taxableValue   Float
+  cgst           Float     @default(0)
+  sgst           Float     @default(0)
+  igst           Float     @default(0)
+  taxTotal       Float
+  roundOff       Float     @default(0)
+  total          Float
+  paidAmount     Float     @default(0) // sum of payments (refunds are negative)
+  returnedAmount Float     @default(0) // value of goods returned
+  costTotal      Float     @default(0)
+  interState     Boolean   @default(false)
+  status         String    @default("PAID") // PAID | PARTIAL | UNPAID | CANCELLED
+  notes          String?
+  userId         Int?
+  jobCardId      Int?      @unique
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime  @default(now())
 
   customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   vehicle  Vehicle?     @relation(fields: [vehicleId], references: [id], onDelete: SetNull)

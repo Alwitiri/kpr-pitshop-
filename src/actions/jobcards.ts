@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAction } from "@/lib/auth";
 import { JOB_STATUSES } from "@/lib/calc";
+import { fireEvent } from "@/lib/workflows";
 import { audit, errMsg, nextNumber, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
 
 export async function createJobCard(_: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -81,7 +82,8 @@ export async function setJobStatus(fd: FormData) {
   const status = String(fd.get("status"));
   if (!(JOB_STATUSES as readonly string[]).includes(status)) return;
   const now = new Date();
-  await db.jobCard.update({
+  const before = await db.jobCard.findUnique({ where: { id }, select: { status: true } });
+  const job = await db.jobCard.update({
     where: { id },
     data: {
       status,
@@ -90,6 +92,9 @@ export async function setJobStatus(fd: FormData) {
     },
   });
   await audit(s.uid, "JOBCARD_STATUS", "JobCard", id, status);
+  if (before?.status !== status && (status === "COMPLETED" || status === "DELIVERED")) {
+    await fireEvent(status === "COMPLETED" ? "JOB_COMPLETED" : "JOB_DELIVERED", { customerId: job.customerId, vehicleId: job.vehicleId, refType: "JobCard", refId: id, job: job.number });
+  }
   revalidatePath("/jobcards");
   revalidatePath(`/jobcards/${id}`);
 }

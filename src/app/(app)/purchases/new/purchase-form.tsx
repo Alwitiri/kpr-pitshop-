@@ -39,7 +39,7 @@ export function PurchaseForm({ products, suppliers, defaultSupplier }: { product
               <option value="">Choose…</option>
               {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <Link href="/suppliers/new" className="mt-1 inline-block text-xs text-brand-700 hover:underline">+ Add new supplier</Link>
+            <Link href="/suppliers/new" className="mt-1 inline-block text-xs font-medium text-link hover:underline">+ Add new supplier</Link>
           </label>
           <label><span className="label">Supplier bill / invoice no.</span><input name="supplierBillNo" className="input" /></label>
           <label><span className="label">Bill date</span><input name="date" type="date" className="input" defaultValue={ymd()} /></label>

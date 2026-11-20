@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QuickFind } from "./scan-listener";
 import { BrandMark } from "./brand";
 
-export type NavItem = { href: string; label: string; icon: string };
+export type NavItem = { href: string; label: string; icon: string; badge?: number; group?: string };
 
 const ICONS: Record<string, React.ReactNode> = {
   dashboard: <path d="M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z" />,
@@ -17,6 +17,7 @@ const ICONS: Record<string, React.ReactNode> = {
   purchases: <path d="M19 6h-2a5 5 0 0 0-10 0H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2m-7-3a3 3 0 0 1 3 3H9a3 3 0 0 1 3-3m0 10a5 5 0 0 1-5-5h2a3 3 0 0 0 6 0h2a5 5 0 0 1-5 5" />,
   suppliers: <path d="M20 8h-3V4H3a2 2 0 0 0-2 2v11h2a3 3 0 0 0 6 0h6a3 3 0 0 0 6 0h2v-5zM6 18.5A1.5 1.5 0 1 1 7.5 17 1.5 1.5 0 0 1 6 18.5m13.5-9 2 2.5H17V9.5zM18 18.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5" />,
   customers: <path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3m-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3m0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13m8 0h-1a4.2 4.2 0 0 1 2 3.5V19h6v-2.5c0-2.3-4.7-3.5-7-3.5" />,
+  followups: <path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2m0 16H5V8h14zm-8.5-2.5-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4z" />,
   jobcards: <path d="M22.7 19 13.6 9.9a6.4 6.4 0 0 0-1.5-6.9A6.6 6.6 0 0 0 4.7 1.7L9 6 6 9 1.6 4.7A6.6 6.6 0 0 0 3 12.1a6.4 6.4 0 0 0 6.9 1.5l9.1 9.1a1 1 0 0 0 1.4 0l2.3-2.3a1 1 0 0 0 0-1.4" />,
   expenses: <path d="M21 18v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1h-9a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2zm-9-2h10V8H12zm4-2.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5" />,
   reports: <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z" />,
@@ -40,57 +41,118 @@ export function Sidebar({
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(href + "/"));
+  const current = items.find((it) => isActive(it.href));
+
+  // Close the mobile menu on navigation and with Escape; stop the page scrolling behind it.
+  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  const groups: { title: string; items: NavItem[] }[] = [];
+  for (const it of items) {
+    const g = it.group ?? "";
+    const last = groups.at(-1);
+    if (last && last.title === g) last.items.push(it);
+    else groups.push({ title: g, items: [it] });
+  }
+  const initials = user.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <>
+      <a href="#main" className="sr-only z-[60] rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+        Skip to content
+      </a>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between bg-gray-950 px-4 py-3 text-white lg:hidden no-print">
-        <button onClick={() => setOpen(true)} className="rounded p-1 hover:bg-white/10" aria-label="Open menu">
-          <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></svg>
+      <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/10 bg-gray-950 px-3 text-white lg:hidden no-print">
+        <button onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-lg hover:bg-white/10" aria-label="Open menu" aria-expanded={open}>
+          <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current" aria-hidden><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></svg>
         </button>
-        <span className="flex items-center gap-2 font-bold">
-          <BrandMark logo={logo} name={shopName} size={28} />
-          {shopName}
-        </span>
-        <span className="w-6" />
+        <BrandMark logo={logo} name={shopName} size={28} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-bold leading-tight">{current?.label ?? shopName}</div>
+          {current && <div className="truncate text-[11px] text-gray-400">{shopName}</div>}
+        </div>
       </div>
-      {open && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 lg:hidden no-print ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        onClick={() => setOpen(false)}
+        aria-hidden
+      />
       <aside
-        className={`no-print fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-gray-950 text-gray-300 transition-transform lg:translate-x-0 ${
+        className={`no-print fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gray-950 text-gray-300 shadow-2xl transition-transform duration-200 ease-out lg:w-60 lg:translate-x-0 lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        aria-label="Main menu"
       >
-        <div className="flex items-center gap-2.5 px-4 py-4">
+        <div className="flex items-center gap-2.5 px-4 pb-3 pt-4">
           <BrandMark logo={logo} name={shopName} size={logo ? 44 : 36} className="shrink-0" />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-bold text-white">{shopName}</div>
-            <div className="text-[11px] text-gray-500">Business Manager</div>
+            <div className="text-[11px] text-gray-400">Business Manager</div>
           </div>
+          <button onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg text-gray-400 hover:bg-white/10 hover:text-white lg:hidden" aria-label="Close menu">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
         </div>
         <QuickFind />
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
-          {items.map((it) => (
-            <Link
-              key={it.href}
-              href={it.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                isActive(it.href) ? "bg-brand-600 text-white" : "hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0 fill-current">{ICONS[it.icon]}</svg>
-              {it.label}
-            </Link>
+        <nav className="flex-1 overflow-y-auto px-2 pb-3 pt-1">
+          {groups.map((g, gi) => (
+            <div key={gi} className={gi ? "mt-3" : ""}>
+              {g.title && <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">{g.title}</div>}
+              <div className="space-y-0.5">
+                {g.items.map((it) => {
+                  const active = isActive(it.href);
+                  return (
+                    <Link
+                      key={it.href}
+                      href={it.href}
+                      aria-current={active ? "page" : undefined}
+                      className={`group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${
+                        active ? "bg-white/[0.08] text-white" : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      <span className={`absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-brand-500 transition-opacity ${active ? "opacity-100" : "opacity-0"}`} aria-hidden />
+                      <svg viewBox="0 0 24 24" className={`h-[18px] w-[18px] shrink-0 fill-current ${active ? "text-brand-500" : "text-gray-500 group-hover:text-gray-300"}`} aria-hidden>
+                        {ICONS[it.icon]}
+                      </svg>
+                      <span className="flex-1 truncate">{it.label}</span>
+                      {!!it.badge && (
+                        <span className="min-w-5 rounded-full bg-amber-400 px-1.5 text-center text-[11px] font-bold leading-5 text-gray-950" aria-label={`${it.badge} due`}>
+                          {it.badge > 99 ? "99+" : it.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </nav>
-        <div className="border-t border-white/10 p-3">
-          <Link href="/account" className="block rounded-lg px-2 py-1.5 hover:bg-white/5" onClick={() => setOpen(false)}>
-            <div className="truncate text-sm font-semibold text-white">{user.name}</div>
-            <div className="text-xs text-gray-500">{user.role.toLowerCase()}</div>
+        <div className="flex items-center gap-2 border-t border-white/10 p-3">
+          <Link href="/account" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 hover:bg-white/5" title="My account and password">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gray-800 text-xs font-bold text-white ring-1 ring-white/10">{initials}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-white">{user.name}</span>
+              <span className="block text-[11px] capitalize text-gray-400">{user.role.toLowerCase()}</span>
+            </span>
           </Link>
           <form action={logoutAction}>
-            <button className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm text-gray-400 hover:bg-white/5 hover:text-white">
-              Log out
+            <button className="grid h-10 w-10 place-items-center rounded-lg text-gray-400 hover:bg-white/10 hover:text-white" aria-label="Log out" title="Log out">
+              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="m16 17 5-5-5-5M21 12H9" />
+              </svg>
             </button>
           </form>
         </div>

@@ -85,15 +85,29 @@ Demo logins after `npm run seed`: `owner/owner123`, `manager/manager123`, `cashi
 | Dashboard | Today's and this month's sales and profit, 30-day chart, top sellers, alerts (stock, dues, overdue jobs, warranties) |
 | POS Billing | Barcode or search entry, GST-inclusive pricing, line and bill discounts, CGST/SGST or IGST, cash/UPI/card/split payments, credit sales, hold/resume bills, quick new customer with vehicle and WhatsApp consent, F2/F9 shortcuts, 80mm and A4 invoices |
 | Sales | Invoice list and filters, receive due payments, returns and exchanges, owner/manager bill cancellation that restores stock |
-| Customers (CRM) | Profiles, multiple vehicles, purchase history, dues with FIFO payment allocation, active warranties, tags, birthdays, segments, CSV export |
+| Customers (CRM) | Profiles, multiple vehicles, purchase history, dues with FIFO payment allocation, active warranties, tags, birthdays, contact history (calls, visits, complaints), automatic segments (Champions, Loyal, New, At risk, Lost…), CSV export, **Excel (CSV) import from old records** with vehicles and opening dues |
+| Follow-ups | Daily call list (overdue / today / upcoming), mark done with the customer's answer and book the next call, snooze, assign to staff; menu badge shows how many are due. Payment follow-ups close themselves when the bill is paid |
+| Customer insights | Segments with suggested actions, repeat rate, lifetime value, new customers per month, new vs returning sales, busiest hours and weekdays, top vehicle makes, follow-up performance by staff |
 | Job Cards | Vehicle check-in, technician, labour, parts, Kanban board, one-click invoice through POS |
 | Products | SKU/barcode, category, brand, variants, bike/car compatibility, HSN/GST, MRP, margin preview, images, warranty, rack location, Excel (CSV) import/export, barcode label printing |
 | Inventory | Live stock, stock ledger, adjustments/damage, physical stock check, reorder list, dead stock, stock value by category |
 | Purchases & Suppliers | Purchase entry (updates stock and cost), supplier bill upload, part payments, supplier balances, purchase returns |
 | Expenses & Cash | Expense categories, cash book by payment method, daily cash closing |
-| Staff | 5 roles with permissions, attendance, per-staff sales, activity log |
+| Staff | 5 roles, **owner-editable permissions** (Staff → Permissions: each screen plus abilities like seeing profit, changing price at billing, cancelling bills, deleting expenses, importing), attendance, per-staff sales, activity log |
 | Reports | P&L, daily/monthly sales, product/category/brand-wise, GST rate and HSN summary, purchases, payment modes, staff performance, top customers, dues, warranty expiry; all exportable to Excel |
-| Settings | Shop/invoice details, backups and restore, network address for other devices |
+| Settings | Shop/invoice details, **workflows & automation** (Settings → Workflows), backups and restore, network address for other devices |
+
+### Workflows (custom automation)
+
+Each rule says *when* something happens, *after how many days*, and *what follow-up to create* (with `{customer}`, `{vehicle}`, `{invoice}`, `{job}`, `{amount}`, `{item}` in the title), optionally only for bills above an amount and given to one staff member.
+
+| When | Starts |
+|---|---|
+| Bill made / bill left unpaid | Right after billing (POS) |
+| Job completed / vehicle delivered | When the job card status changes or its invoice is made |
+| Birthday coming / warranty ending / customer inactive | Checked every hour in the background (and on opening Follow-ups) |
+
+Seven rules are installed by default (inactive-customer is off). A rule never creates the same follow-up twice.
 
 ## Technical notes
 

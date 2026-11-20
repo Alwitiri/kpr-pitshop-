@@ -8,6 +8,7 @@ import { addDays, dayRange, fmtDate, fmtDateTime, money, money0, monthStart, qty
 import { label } from "@/lib/calc";
 import { Badge, PageHeader, Section, Stat, TableWrap } from "@/components/ui";
 import { BarChart } from "@/components/bar-chart";
+import { Icon } from "@/components/icons";
 
 export const metadata = { title: "Dashboard" };
 
@@ -43,6 +44,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   }
 
   const showMoney = can(s.role, "sales");
+  const followUpsDue = can(s.role, "followups")
+    ? await db.followUp.count({ where: { status: "OPEN", dueDate: { lte: dayRange(today).lte } } })
+    : null;
   const [items30, todaySales, monthAgg, products, recent, dues, suppliers, openJobs, expensesMonth, warrantiesSoon, todayPays] = await Promise.all([
     showMoney ? soldItems(from30, today) : Promise.resolve([]),
     db.sale.aggregate({ where: { date: dayRange(today), status: { not: "CANCELLED" } }, _sum: { total: true, returnedAmount: true }, _count: true }),
@@ -107,6 +111,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Stat label="Products" value={products.length} hint={`${low.length} low · ${out.length} out`} tone={out.length ? "bad" : low.length ? "warn" : "default"} href={can(s.role, "inventory") ? "/inventory" : undefined} />
         {can(s.role, "customers") && <Stat label="Customer dues" value={money0(custDue)} hint={`${dues.length} customers`} tone={custDue > 0 ? "warn" : "good"} href="/customers?dues=yes" />}
         {can(s.role, "suppliers") && <Stat label="Supplier payable" value={money0(suppDue)} tone={suppDue > 0 ? "warn" : "good"} href="/suppliers" />}
+        {followUpsDue != null && <Stat label="Follow-ups due" value={followUpsDue} hint="calls to make today" tone={followUpsDue ? "warn" : "good"} href="/followups" />}
         <Stat label="Open job cards" value={openJobs.length} hint={overdueJobs.length ? `${overdueJobs.length} overdue` : "none overdue"} tone={overdueJobs.length ? "bad" : "default"} href="/jobcards" />
       </div>
 
@@ -191,11 +196,11 @@ function greeting() {
 }
 
 function Alert({ tone, text, sub, href }: { tone: "bad" | "warn" | "info"; text: string; sub?: string; href: string }) {
-  const icon = { bad: "⛔", warn: "⚠️", info: "ℹ️" }[tone];
+  const [icon, cls] = { bad: ["alert", "bg-red-50 text-red-600"], warn: ["alert", "bg-amber-50 text-amber-600"], info: ["info", "bg-sky-50 text-sky-600"] }[tone];
   return (
     <li>
-      <Link href={href} className="flex gap-2 rounded-lg p-1 hover:bg-gray-50">
-        <span aria-hidden>{icon}</span>
+      <Link href={href} className="flex items-start gap-2.5 rounded-lg p-1.5 transition hover:bg-gray-50">
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${cls}`}><Icon name={icon} className="h-3.5 w-3.5" /></span>
         <span className="min-w-0">
           <span className="block font-medium">{text}</span>
           {sub && <span className="block truncate text-xs text-gray-500">{sub}</span>}

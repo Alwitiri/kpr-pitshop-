@@ -13,6 +13,11 @@ import { addJobPart, removeJobPart, setJobStatus, updateJobCard } from "@/action
 
 const toLocalInput = (d: Date | null) => (d ? new Date(d.getTime() + 5.5 * 3600e3).toISOString().slice(0, 16) : "");
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const r = await db.jobCard.findUnique({ where: { id: Number((await params).id) || 0 }, select: { number: true } });
+  return { title: r?.number ?? "Job card" };
+}
+
 export default async function JobCardPage({ params }: { params: Promise<{ id: string }> }) {
   const s = await requirePage("jobcards");
   const id = Number((await params).id);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAction } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { parseDay, round2 } from "@/lib/format";
 import { cashSummary } from "@/lib/cash";
 import { audit, errMsg, num, optStr, str, type ActionResult } from "@/lib/server-utils";
@@ -26,7 +27,7 @@ export async function addExpense(_: ActionResult, fd: FormData): Promise<ActionR
 
 export async function deleteExpense(fd: FormData) {
   const s = await requireAction("expenses");
-  if (!["OWNER", "MANAGER"].includes(s.role)) throw new Error("Not allowed.");
+  if (!can(s.role, "deleteExpense")) throw new Error("Not allowed.");
   const id = Number(fd.get("id"));
   await db.expense.delete({ where: { id } });
   await audit(s.uid, "EXPENSE_DELETED", "Expense", id);

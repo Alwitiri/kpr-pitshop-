@@ -54,6 +54,10 @@ export default async function SettingsPage() {
           </ActionForm>
         </Section>
         <div className="space-y-5">
+          <Section title="Workflows & automation" actions={<a href="/settings/workflows" className="link text-xs">Open</a>}>
+            <p className="text-sm text-gray-600">Rules that create follow-up calls by themselves: feedback after a bill, payment reminders, “vehicle ready”, next service, birthdays and ending warranties.</p>
+            <a href="/settings/workflows" className="btn-outline mt-3 inline-block">Manage rules</a>
+          </Section>
           <Section title="Company logo">
             <div className="flex items-center gap-4">
               <BrandMark logo={logo} name={s.shopName} size={88} className="border" />

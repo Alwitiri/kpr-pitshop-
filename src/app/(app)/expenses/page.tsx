@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { dayRange, fmtDate, money, monthStart, ymd } from "@/lib/format";
 import { EXPENSE_CATEGORIES, label } from "@/lib/calc";
 import { Empty, FilterBar, PageHeader, Section, Stat, TableWrap } from "@/components/ui";
@@ -21,7 +22,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const total = rows.reduce((a, r) => a + r.amount, 0);
   const byCat = new Map<string, number>();
   for (const r of rows) byCat.set(r.category, (byCat.get(r.category) ?? 0) + r.amount);
-  const canDelete = s.role === "OWNER" || s.role === "MANAGER";
+  const canDelete = can(s.role, "deleteExpense");
 
   return (
     <>

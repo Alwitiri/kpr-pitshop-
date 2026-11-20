@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 
 /** Shown inside the app (menu stays visible) if a page hits an unexpected error. */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const tooLarge = /exceeded|too large|413/i.test(error.message);
   return (
     <div className="mx-auto mt-16 max-w-md text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-2xl">⚠️</div>
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Icon name="alert" className="h-6 w-6" /></div>
       <h1 className="text-xl font-bold">{tooLarge ? "That file is too large" : "Something went wrong on this screen"}</h1>
       <p className="mt-2 text-sm text-gray-600">
         {tooLarge

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db, like } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
-import { canSeeProfit } from "@/lib/roles";
+import { can, canSeeProfit } from "@/lib/roles";
 import { money, qty } from "@/lib/format";
 import { Badge, Empty, FilterBar, PageHeader, Pager, TableWrap, qs } from "@/components/ui";
 import { ExportCsv } from "@/components/forms";
@@ -55,7 +55,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               ]}
             />
             <Link href="/products/labels" className="btn-outline">Print barcode stickers</Link>
-            <Link href="/products/import" className="btn-outline">Import</Link>
+            {can(s.role, "importData") && <Link href="/products/import" className="btn-outline">Import</Link>}
             <Link href="/products/masters" className="btn-outline">Categories & brands</Link>
             <Link href="/products/new" className="btn-primary">+ New product</Link>
           </>
@@ -134,7 +134,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       {p.category?.name ?? "—"}
                       <div className="text-gray-500">{p.brand?.name}</div>
                     </td>
-                    <td className="max-w-48 text-xs text-gray-600">
+                    <td className="min-w-36 max-w-56 text-xs text-gray-600">
                       {p.fitments.length ? p.fitments.map((f) => `${f.make} ${f.model ?? ""}`.trim()).join(", ") : <span className="text-gray-400">Universal</span>}
                     </td>
                     {profit && <td className="text-right tabular-nums">{money(p.purchasePrice)}</td>}

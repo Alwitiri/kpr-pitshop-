@@ -12,6 +12,11 @@ import { Barcode } from "@/components/barcode";
 import { deleteProduct } from "@/actions/products";
 import { Submit } from "@/components/forms";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const r = await db.product.findUnique({ where: { id: Number((await params).id) || 0 }, select: { name: true } });
+  return { title: r?.name ?? "Product" };
+}
+
 export default async function ProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
   const s = await requirePage("products");
   const id = Number((await params).id);
