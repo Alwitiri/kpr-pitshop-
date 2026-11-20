@@ -1,6 +1,8 @@
 import "server-only";
 import { db } from "./db";
 import { addDays, money, round2, ymd } from "./format";
+import { cloudConfig, enqueueCloud, kickCloudQueue } from "./wa-cloud";
+import { kindForFollowUp } from "./wa-templates";
 
 /** What can start a workflow rule. Event triggers fire right away; scheduled ones are checked every hour. */
 export const TRIGGERS: Record<string, { label: string; delay: string; scheduled?: boolean; amount?: boolean }> = {
@@ -82,14 +84,14 @@ export async function fireEvent(trigger: string, ctx: Ctx) {
   }
 }
 
-type Rule = { id: number; followUpType: string; assignUserId: number | null };
+type Rule = { id: number; followUpType: string; assignUserId: number | null; autoWhatsApp?: boolean };
 
 async function createFromRule(
   r: Rule,
   f: { customerId: number; vehicleId?: number | null; refType?: string; refId?: number; due: string; title: string; key: string },
 ) {
   try {
-    await db.followUp.create({
+    const created = await db.followUp.create({
       data: {
         customerId: f.customerId,
         vehicleId: f.vehicleId ?? null,
@@ -103,6 +105,12 @@ async function createFromRule(
         dedupeKey: f.key,
       },
     });
+    // Automatic mode: also send the matching WhatsApp message on the due date.
+    if (r.autoWhatsApp && (await cloudConfig()).on) {
+      const due = created.dueDate > new Date() ? created.dueDate : null;
+      const id = await enqueueCloud({ kind: kindForFollowUp(created.type, created.refType), followUpId: created.id, customerId: created.customerId, sendAfter: due });
+      if (id && !due) kickCloudQueue();
+    }
     return true;
   } catch (e) {
     if (String(e).includes("Unique constraint")) return false; // already created earlier

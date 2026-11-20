@@ -3,6 +3,7 @@ import { db } from "./db";
 import { applyMigrations } from "./migrate";
 import { autoBackupIfDue } from "./backup";
 import { runScheduledRules } from "./workflows";
+import { processCloudQueue } from "./wa-cloud";
 
 let started = false;
 
@@ -24,4 +25,6 @@ export async function startup() {
   };
   setTimeout(tick, 15_000);
   setInterval(tick, 60 * 60 * 1000).unref();
+  // Automatic WhatsApp (Cloud API, only if switched on): send due / waiting messages every minute
+  setInterval(() => processCloudQueue().catch(() => null), 60 * 1000).unref();
 }

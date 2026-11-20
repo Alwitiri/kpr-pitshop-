@@ -7,6 +7,7 @@ import { requireAction } from "@/lib/auth";
 import { can, type Perm } from "@/lib/roles";
 import { composeMessage, fillMessage } from "@/lib/whatsapp";
 import { checkInternet } from "@/lib/internet";
+import { cloudConfig, cloudLoadTemplates, cloudTest, enqueueCloud, kickCloudQueue, sendQueuedNow } from "@/lib/wa-cloud";
 import { WA_DEFAULTS, WA_KINDS, WA_LABEL, waPhone, waUrl, type WaKind } from "@/lib/wa-templates";
 import { customerStats, segmentOf, SEGMENTS, type Segment } from "@/lib/crm";
 import { audit, errMsg, getSettings, optInt, str, type ActionResult } from "@/lib/server-utils";
@@ -17,6 +18,12 @@ export type WaOpen = {
   queued?: number;
   /** Offers are paused while the shop has no internet. */
   offline?: boolean;
+  /** Automatic mode: sent directly through the WhatsApp Cloud API. */
+  sent?: { phone: string };
+  /** Automatic mode, no internet: will be sent by itself when the internet is back. */
+  cloudQueued?: number;
+  /** Automatic sending failed – these links open the same message in WhatsApp instead. */
+  fallback?: { url: string; webUrl: string; phone: string; text: string };
   needPhone?: boolean;
   error?: string;
 };
@@ -75,6 +82,8 @@ export async function prepareWhatsApp(input: {
   phone?: string | null;
   /** Open even though the shop PC has no internet (e.g. a phone on mobile data). */
   force?: boolean;
+  /** Automatic mode is on, but open this one in WhatsApp (click to send) instead. */
+  via?: "CLICK";
 }): Promise<WaOpen> {
   try {
     const s = await requireAction();
@@ -84,6 +93,22 @@ export async function prepareWhatsApp(input: {
     if (input.phone && !waPhone(input.phone, settings.waCountryCode)) return { error: "That mobile number does not look right.", needPhone: true };
     const m = await composeMessage(input);
     if (!m.phone) return { needPhone: true };
+    // Automatic mode: send through the WhatsApp Cloud API instead of opening WhatsApp.
+    const cloud = await cloudConfig();
+    if (cloud.on && input.via !== "CLICK") {
+      const id = await enqueueCloud({ ...input, phone: m.phone, userId: s.uid, userName: s.name });
+      if (!id) return { needPhone: true };
+      if (!(await checkInternet())) {
+        revalidatePath("/whatsapp");
+        return { cloudQueued: id };
+      }
+      const r = await sendQueuedNow(id);
+      if (m.customerId) revalidatePath(`/customers/${m.customerId}`);
+      revalidatePath("/whatsapp");
+      if (r.ok) return { sent: { phone: m.phone } };
+      if (r.retry) return { cloudQueued: id, error: r.error };
+      return { error: r.error ?? "WhatsApp did not accept the message.", fallback: links(m.phone, m.text, settings.waOpenWith) };
+    }
     const msg = { kind: input.kind, phone: m.phone, text: m.text, customerId: m.customerId, saleId: m.saleId, jobCardId: m.jobCardId, followUpId: input.followUpId };
     // No internet: keep the message so nobody has to remember it – it waits in WhatsApp → Waiting.
     if (!input.force && !(await checkInternet())) {
@@ -227,11 +252,37 @@ export async function saveWaSettings(_: ActionResult, fd: FormData): Promise<Act
     const mode = str(fd, "waOpenWith");
     const cc = str(fd, "waCountryCode").replace(/\D/g, "");
     if (!cc || cc.length > 4) return { error: "Enter the country code, e.g. 91 for India." };
-    await db.shopSettings.update({ where: { id: 1 }, data: { waOpenWith: ["APP", "WEB", "LINK"].includes(mode) ? mode : "APP", waCountryCode: cc } });
+    const waMode = str(fd, "waMode") === "CLOUD" ? "CLOUD" : "CLICK";
+    const data: Record<string, unknown> = {
+      waOpenWith: ["APP", "WEB", "LINK"].includes(mode) ? mode : "APP",
+      waCountryCode: cc,
+      waMode,
+      waAutoInvoice: fd.get("waAutoInvoice") === "on",
+    };
+    // Meta credentials: only the owner may change them; a blank token box keeps the saved token.
+    if (s.role === "OWNER" && fd.has("waCloudPhoneId")) {
+      data.waCloudPhoneId = str(fd, "waCloudPhoneId").replace(/\D/g, "") || null;
+      data.waCloudWabaId = str(fd, "waCloudWabaId").replace(/\D/g, "") || null;
+      const ver = str(fd, "waCloudVersion");
+      data.waCloudVersion = /^v\d+\.\d+$/.test(ver) ? ver : "v22.0";
+      const token = str(fd, "waCloudToken");
+      if (fd.get("waCloudTokenClear") === "on") data.waCloudToken = null;
+      else if (token) data.waCloudToken = token;
+    }
+    const before = await getSettings();
+    if (waMode === "CLOUD" && !before.waCloudToken && !data.waCloudToken && process.env.KPR_WA_CLOUD_MOCK !== "1")
+      return { error: "To switch on automatic sending, the owner must first enter the Phone number ID and access token." };
+    await db.shopSettings.update({ where: { id: 1 }, data });
     for (const k of WA_KINDS) {
-      const body = String(fd.get(`t_${k.key}`) ?? "").replace(/\r\n/g, "\n").trim();
-      if (!body || body === WA_DEFAULTS[k.key]) await db.waTemplate.deleteMany({ where: { key: k.key } });
-      else await db.waTemplate.upsert({ where: { key: k.key }, create: { key: k.key, body }, update: { body } });
+      const body = String(fd.get(`t_${k.key}`) ?? "").replace(/\r\n/g, "\n").trim() || WA_DEFAULTS[k.key];
+      const cloudTemplate = str(fd, `ct_${k.key}`) || null;
+      const cloudLang = str(fd, `cl_${k.key}`) || null;
+      const cloudParams = str(fd, `cp_${k.key}`).replace(/[{}\s]/g, "") || null;
+      if (body === WA_DEFAULTS[k.key] && !cloudTemplate) await db.waTemplate.deleteMany({ where: { key: k.key } });
+      else {
+        const row = { body, cloudTemplate, cloudLang, cloudParams };
+        await db.waTemplate.upsert({ where: { key: k.key }, create: { key: k.key, ...row }, update: row });
+      }
     }
     await audit(s.uid, "WA_SETTINGS_SAVED", "WaTemplate", null);
     revalidatePath("/whatsapp/settings");
@@ -275,5 +326,66 @@ export async function openQueued(id: number): Promise<WaOpen> {
 export async function removeQueued(id: number) {
   await requireAction();
   await db.waMessage.updateMany({ where: { id, status: "QUEUED" }, data: { status: "REMOVED" } });
+  revalidatePath("/whatsapp");
+}
+
+// ── Automatic mode (WhatsApp Cloud API) ──
+
+export async function testCloudConnection(): Promise<{ ok: boolean; text: string }> {
+  await requireAction("whatsapp");
+  return cloudTest();
+}
+
+export async function loadCloudTemplates(): Promise<{ ok: boolean; text: string }> {
+  const s = await requireAction("whatsapp");
+  const r = await cloudLoadTemplates();
+  if (r.ok) await audit(s.uid, "WA_TEMPLATES_LOADED", "WaTemplate", null, r.text);
+  revalidatePath("/whatsapp/settings");
+  return r;
+}
+
+/** Offer list: let the background sender send to everyone still pending, at a steady pace. */
+export async function sendCampaignAutomatically(campaignId: number): Promise<{ ok?: string; error?: string }> {
+  try {
+    const s = await requireAction("whatsapp");
+    if (!(await cloudConfig()).on) return { error: "Automatic sending is not switched on (WhatsApp settings)." };
+    const c = await db.waCampaign.findUnique({ where: { id: campaignId }, include: { recipients: { where: { status: "PENDING" } } } });
+    if (!c) return { error: "Offer not found." };
+    let n = 0;
+    for (const r of c.recipients) {
+      const id = await enqueueCloud({ kind: "OFFER", customerId: r.customerId, phone: r.phone, body: c.body, campaignId: c.id, recipientId: r.id, userId: s.uid, userName: s.name });
+      if (id) {
+        await db.waCampaignRecipient.update({ where: { id: r.id }, data: { status: "QUEUED" } });
+        n++;
+      }
+    }
+    await audit(s.uid, "WA_CAMPAIGN_AUTO", "WaCampaign", c.id, `${n} queued`);
+    kickCloudQueue();
+    revalidatePath(`/whatsapp/${c.id}`);
+    return { ok: `${n} ${n === 1 ? "message is" : "messages are"} being sent automatically (about one every second while the internet is on).` };
+  } catch (e) {
+    return { error: errMsg(e) };
+  }
+}
+
+/** Waiting / failed automatic messages: send now, retry, or give up. */
+export async function sendCloudNow(id: number): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    await requireAction("whatsapp");
+    const m = await db.waMessage.findUnique({ where: { id } });
+    if (m?.status === "FAILED") await db.waMessage.update({ where: { id }, data: { status: "QUEUED", attempts: 0, error: null, sendAfter: null } });
+    if (!(await checkInternet(true))) return { error: "Still no internet – it will be sent automatically when it is back." };
+    const r = await sendQueuedNow(id);
+    revalidatePath("/whatsapp");
+    return r.ok ? { ok: true } : { error: r.error };
+  } catch (e) {
+    return { error: errMsg(e) };
+  }
+}
+
+export async function cancelCloudMessage(id: number) {
+  await requireAction("whatsapp");
+  const m = await db.waMessage.update({ where: { id }, data: { status: "REMOVED" } });
+  if (m.recipientId) await db.waCampaignRecipient.update({ where: { id: m.recipientId }, data: { status: "PENDING" } }).catch(() => null);
   revalidatePath("/whatsapp");
 }

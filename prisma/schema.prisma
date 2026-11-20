@@ -57,24 +57,31 @@ model AuditLog {
 }
 
 model ShopSettings {
-  id              Int     @id @default(1)
-  shopName        String  @default("KPR Pitstop N Sportz")
-  tagline         String? @default("Bike & Car Accessories")
-  address         String? @default("")
-  phone           String? @default("")
-  email           String? @default("")
-  gstin           String? @default("")
-  stateName       String  @default("Tamil Nadu")
-  stateCode       String  @default("33")
-  invoicePrefix   String  @default("KPR")
-  invoiceFooter   String? @default("Thank you for shopping with us! Goods once sold can be exchanged within 7 days with bill.")
-  defaultMinStock Int     @default(5)
-  deadStockDays   Int     @default(90)
-  bankDetails     String? @default("")
-  upiId           String? @default("")
-  logoFile        String? // file name inside data/branding – each shop uploads its own logo
-  waOpenWith      String  @default("APP") // APP = WhatsApp Desktop / phone app, WEB = WhatsApp Web
-  waCountryCode   String  @default("91")
+  id               Int     @id @default(1)
+  shopName         String  @default("KPR Pitstop N Sportz")
+  tagline          String? @default("Bike & Car Accessories")
+  address          String? @default("")
+  phone            String? @default("")
+  email            String? @default("")
+  gstin            String? @default("")
+  stateName        String  @default("Tamil Nadu")
+  stateCode        String  @default("33")
+  invoicePrefix    String  @default("KPR")
+  invoiceFooter    String? @default("Thank you for shopping with us! Goods once sold can be exchanged within 7 days with bill.")
+  defaultMinStock  Int     @default(5)
+  deadStockDays    Int     @default(90)
+  bankDetails      String? @default("")
+  upiId            String? @default("")
+  logoFile         String? // file name inside data/branding – each shop uploads its own logo
+  waOpenWith       String  @default("APP") // APP = WhatsApp Desktop / phone app, WEB = WhatsApp Web
+  waCountryCode    String  @default("91")
+  waMode           String  @default("CLICK") // CLICK = free click-to-send, CLOUD = automatic via WhatsApp Cloud API
+  waCloudPhoneId   String? // Cloud API "Phone number ID"
+  waCloudWabaId    String? // WhatsApp Business Account ID (to load approved templates)
+  waCloudToken     String? // permanent access token – owner only, never sent to the browser
+  waCloudVersion   String  @default("v22.0")
+  waCloudTemplates String? // JSON cache of approved templates loaded from Meta
+  waAutoInvoice    Boolean @default(false) // send the bill automatically after every sale
 }
 
 // Owner-editable permissions for each role (JSON list of modules / abilities).
@@ -345,6 +352,7 @@ model WorkflowRule {
   minAmount    Float      @default(0)
   assignUserId Int?
   active       Boolean    @default(true)
+  autoWhatsApp Boolean    @default(false) // automatic mode: send the WhatsApp message instead of only making a call task
   createdAt    DateTime   @default(now())
   followUps    FollowUp[]
 }
@@ -537,31 +545,41 @@ model DayClose {
 
 // Owner-edited wording of each message. Missing keys use the built-in default text.
 model WaTemplate {
-  key  String @id // INVOICE | PAYMENT_DUE | VEHICLE_READY | SERVICE_DUE | WARRANTY | BIRTHDAY | FEEDBACK | WIN_BACK | GENERAL | OFFER
-  body String
+  key           String  @id // INVOICE | PAYMENT_DUE | VEHICLE_READY | SERVICE_DUE | WARRANTY | BIRTHDAY | FEEDBACK | WIN_BACK | GENERAL | OFFER
+  body          String
+  cloudTemplate String? // approved Meta template name used in automatic mode
+  cloudLang     String? // e.g. en, en_US, ta
+  cloudParams   String? // placeholders filling {{1}}, {{2}}… in order, e.g. "customer,invoice,total"
 }
 
 // Every message opened in WhatsApp (we cannot see if staff pressed Send, so this is "opened to send").
 model WaMessage {
-  id         Int       @id @default(autoincrement())
-  customerId Int?
-  phone      String
-  kind       String
-  body       String
-  saleId     Int?
-  jobCardId  Int?
-  followUpId Int?
-  campaignId Int?
-  userId     Int?
-  userName   String?
-  status     String    @default("OPENED") // OPENED | QUEUED (no internet – waiting to be opened) | REMOVED
-  openedAt   DateTime?
-  createdAt  DateTime  @default(now())
-  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  id          Int       @id @default(autoincrement())
+  customerId  Int?
+  phone       String
+  kind        String
+  body        String
+  saleId      Int?
+  jobCardId   Int?
+  followUpId  Int?
+  campaignId  Int?
+  userId      Int?
+  userName    String?
+  status      String    @default("OPENED") // OPENED (click) | QUEUED (waiting) | SENT (Cloud API accepted) | FAILED | REMOVED
+  channel     String    @default("CLICK") // CLICK | CLOUD
+  waId        String? // message id returned by Meta
+  error       String?
+  attempts    Int       @default(0)
+  sendAfter   DateTime? // automatic messages wait until this time (e.g. a reminder's due date)
+  recipientId Int? // offer list row this message belongs to
+  openedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([customerId])
   @@index([status])
+  @@index([status, sendAfter])
 }
 
 // An offer sent to a chosen group of opted-in customers, one chat at a time.
@@ -584,6 +602,7 @@ model WaCampaignRecipient {
   status     String     @default("PENDING") // PENDING | SENT | SKIPPED | OPTED_OUT
   sentAt     DateTime?
   sentById   Int?
+  error      String?
   campaign   WaCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@index([campaignId, status])

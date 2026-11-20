@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const dueFollowUps = can(s.role, "followups")
     ? await db.followUp.count({ where: { status: "OPEN", dueDate: { lte: dayRange(ymd()).lte } } }).catch(() => 0)
     : 0;
-  const waWaiting = can(s.role, "whatsapp") ? await db.waMessage.count({ where: { status: "QUEUED" } }).catch(() => 0) : 0;
+  const waWaiting = can(s.role, "whatsapp") ? await db.waMessage.count({ where: { OR: [{ status: "QUEUED", channel: "CLICK" }, { status: "FAILED", channel: "CLOUD", createdAt: { gte: new Date(Date.now() - 14 * 864e5) } }] } }).catch(() => 0) : 0;
   const items = NAV.filter((n) => can(s.role, n.module)).map(({ href, label, icon, group }) => ({
     href, label, icon, group, badge: href === "/followups" ? dueFollowUps : href === "/whatsapp" ? waWaiting : undefined,
   }));

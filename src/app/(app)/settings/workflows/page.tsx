@@ -5,15 +5,16 @@ import { FOLLOWUP_TYPES, PLACEHOLDERS, TRIGGERS } from "@/lib/workflows";
 import { PageHeader, Section, TableWrap } from "@/components/ui";
 import { ActionForm, Submit, Toggle } from "@/components/forms";
 import { deleteWorkflowRule, runWorkflowsNow, saveWorkflowRule, toggleWorkflowRule } from "@/actions/followups";
+import { cloudConfig } from "@/lib/wa-cloud";
 
 export const metadata = { title: "Workflows" };
 
 type Rule = {
   id?: number; name?: string; trigger?: string; delayDays?: number; followUpType?: string; title?: string;
-  minAmount?: number; assignUserId?: number | null; active?: boolean;
+  minAmount?: number; assignUserId?: number | null; active?: boolean; autoWhatsApp?: boolean;
 };
 
-function RuleForm({ r, staff }: { r?: Rule; staff: { id: number; name: string }[] }) {
+function RuleForm({ r, staff, cloudOn }: { r?: Rule; staff: { id: number; name: string }[]; cloudOn: boolean }) {
   return (
     <ActionForm action={saveWorkflowRule} resetOnSuccess={!r?.id} className="space-y-3">
       {r?.id && <input type="hidden" name="id" value={r.id} />}
@@ -49,6 +50,17 @@ function RuleForm({ r, staff }: { r?: Rule; staff: { id: number; name: string }[
           </select>
         </label>
       </div>
+      <label className="flex items-start gap-2 rounded-lg bg-emerald-50/60 p-2.5 text-sm">
+        <input type="checkbox" name="autoWhatsApp" defaultChecked={r?.autoWhatsApp ?? false} className="mt-0.5 h-4 w-4" />
+        <span>
+          <b>Send WhatsApp automatically</b>
+          <span className="block text-xs text-gray-600">
+            {cloudOn
+              ? "On the due date the matching message is sent by itself and the follow-up is marked done. If it fails, the follow-up stays open for a call."
+              : "Needs automatic mode (WhatsApp settings → Sending method). Until then only the follow-up is made."}
+          </span>
+        </span>
+      </label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={r?.active ?? true} className="h-4 w-4" /> Rule is on</label>
       <Submit>{r?.id ? "Save rule" : "Add rule"}</Submit>
     </ActionForm>
@@ -57,6 +69,7 @@ function RuleForm({ r, staff }: { r?: Rule; staff: { id: number; name: string }[
 
 export default async function WorkflowsPage() {
   await requirePage("settings");
+  const cloudOn = (await cloudConfig()).on;
   const [rules, staff, counts] = await Promise.all([
     db.workflowRule.findMany({ orderBy: [{ active: "desc" }, { id: "asc" }] }),
     db.user.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -94,12 +107,16 @@ export default async function WorkflowsPage() {
                           {r.minAmount > 0 && ` · bill ≥ ${money(r.minAmount)}`}
                         </div>
                       </td>
-                      <td className="text-xs">{FOLLOWUP_TYPES[r.followUpType] ?? r.followUpType}{r.assignUserId && <div className="text-gray-500">for {staffName.get(r.assignUserId) ?? "—"}</div>}</td>
+                      <td className="text-xs">
+                        {FOLLOWUP_TYPES[r.followUpType] ?? r.followUpType}
+                        {r.assignUserId && <div className="text-gray-500">for {staffName.get(r.assignUserId) ?? "—"}</div>}
+                        {r.autoWhatsApp && <div className={`mt-1 badge ${cloudOn ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`} title={cloudOn ? "Sent automatically" : "Automatic mode is off"}>+ auto WhatsApp</div>}
+                      </td>
                       <td className="text-right text-xs tabular-nums">{stat(r.id, "OPEN")} / {stat(r.id, "DONE")}</td>
                       <td className="min-w-48">
                         <div className="flex flex-wrap justify-end gap-1.5">
                           <form action={toggleWorkflowRule}><input type="hidden" name="id" value={r.id} /><button className={r.active ? "btn-outline btn-sm" : "btn-primary btn-sm"}>{r.active ? "Turn off" : "Turn on"}</button></form>
-                          <Toggle label="Edit" className="btn-outline btn-sm"><div className="w-[min(85vw,380px)] text-left"><RuleForm r={r} staff={staff} /></div></Toggle>
+                          <Toggle label="Edit" className="btn-outline btn-sm"><div className="w-[min(85vw,380px)] text-left"><RuleForm r={r} staff={staff} cloudOn={cloudOn} /></div></Toggle>
                           <form action={deleteWorkflowRule}><input type="hidden" name="id" value={r.id} /><Submit className="btn-ghost btn-sm text-red-600" confirm={`Delete the rule “${r.name}”? Follow-ups it already made are kept.`}>Delete</Submit></form>
                         </div>
                       </td>
@@ -112,7 +129,7 @@ export default async function WorkflowsPage() {
           {!rules.length && <p className="p-6 text-center text-sm text-gray-500">No rules yet – add one on the right.</p>}
         </Section>
         <div className="space-y-5">
-          <Section title="Add a rule"><RuleForm staff={staff} /></Section>
+          <Section title="Add a rule"><RuleForm staff={staff} cloudOn={cloudOn} /></Section>
           <Section title="Ideas">
             <ul className="list-disc space-y-1.5 pl-4 text-sm text-gray-600">
               <li>Bill ≥ ₹5,000 → “VIP thank-you call” after 1 day, given to the owner.</li>

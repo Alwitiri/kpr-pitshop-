@@ -8,6 +8,7 @@ import { WaBubble } from "@/components/wa-text";
 import { deleteCampaign } from "@/actions/whatsapp";
 import { composeMessage } from "@/lib/whatsapp";
 import { CampaignRunner } from "./runner";
+import { cloudConfig } from "@/lib/wa-cloud";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const c = await db.waCampaign.findUnique({ where: { id: Number((await params).id) || 0 }, select: { name: true } });
@@ -19,6 +20,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const id = Number((await params).id);
   const c = await db.waCampaign.findUnique({ where: { id }, include: { recipients: { orderBy: { id: "asc" } } } });
   if (!c) notFound();
+  const cloud = await cloudConfig();
   // Show the message as the first customer will see it
   const first = c.recipients[0];
   const preview = first ? (await composeMessage({ kind: "OFFER", customerId: first.customerId, body: c.body, phone: first.phone })).text : c.body;
@@ -37,7 +39,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         }
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
-        <CampaignRunner recipients={c.recipients.map((r) => ({ id: r.id, name: r.name, phone: r.phone, status: r.status, customerId: r.customerId }))} />
+        <CampaignRunner
+          campaignId={c.id}
+          cloudOn={cloud.on}
+          recipients={c.recipients.map((r) => ({ id: r.id, name: r.name, phone: r.phone, status: r.status, customerId: r.customerId, error: r.error }))}
+        />
         <div className="space-y-5">
           <Section title="Message">
             <WaBubble text={preview} />

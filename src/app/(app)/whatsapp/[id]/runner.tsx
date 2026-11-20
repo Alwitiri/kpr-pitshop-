@@ -1,27 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { sendCampaignRecipient, setRecipientStatus, type WaOpen } from "@/actions/whatsapp";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { sendCampaignAutomatically, sendCampaignRecipient, setRecipientStatus, type WaOpen } from "@/actions/whatsapp";
 import { openWhatsApp, WaGlyph, WaResultPanel } from "@/components/whatsapp-button";
 
-type R = { id: number; name: string; phone: string; status: string; customerId: number | null };
+type R = { id: number; name: string; phone: string; status: string; customerId: number | null; error?: string | null };
 
 const STATUS: Record<string, [string, string]> = {
   PENDING: ["Not sent", "bg-gray-100 text-gray-600"],
-  SENT: ["Opened", "bg-emerald-50 text-emerald-700"],
+  SENT: ["Sent", "bg-emerald-50 text-emerald-700"],
   SKIPPED: ["Skipped", "bg-amber-50 text-amber-700"],
   OPTED_OUT: ["Opted out", "bg-red-50 text-red-700"],
+  QUEUED: ["Sending automatically…", "bg-sky-50 text-sky-700"],
+  FAILED: ["Failed", "bg-red-50 text-red-700"],
 };
 
-export function CampaignRunner({ recipients }: { recipients: R[] }) {
+export function CampaignRunner({ recipients, campaignId, cloudOn }: { recipients: R[]; campaignId: number; cloudOn: boolean }) {
   // Local copy so the list updates instantly; the server keeps the real status.
   const [rows, setRows] = useState(recipients);
+  useEffect(() => setRows(recipients), [recipients]);
+  const router = useRouter();
+  const sending = rows.some((r) => r.status === "QUEUED");
+  // While the background sender works through the list, refresh every few seconds.
+  useEffect(() => {
+    if (!sending) return;
+    const t = setInterval(() => router.refresh(), 4000);
+    return () => clearInterval(t);
+  }, [sending, router]);
+  const [autoMsg, setAutoMsg] = useState<{ ok?: string; error?: string } | null>(null);
   const [res, setRes] = useState<{ id: number; r: WaOpen } | null>(null);
   const [pending, start] = useTransition();
   const next = rows.find((r) => r.status === "PENDING");
   const done = rows.filter((r) => r.status !== "PENDING").length;
   const sent = rows.filter((r) => r.status === "SENT").length;
+  const pendingCount = rows.filter((r) => r.status === "PENDING").length;
   const pct = rows.length ? Math.round((done / rows.length) * 100) : 0;
 
   const [offlineFor, setOfflineFor] = useState<R | null>(null);
@@ -52,8 +66,23 @@ export function CampaignRunner({ recipients }: { recipients: R[] }) {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">Progress</div>
-            <div className="mt-1 text-2xl font-bold tabular-nums">{sent} <span className="text-base font-medium text-gray-500">of {rows.length} opened</span></div>
+            <div className="mt-1 text-2xl font-bold tabular-nums">{sent} <span className="text-base font-medium text-gray-500">of {rows.length} sent</span></div>
           </div>
+          {cloudOn && pendingCount > 0 && (
+            <button
+              className="btn-outline min-h-11"
+              disabled={pending}
+              onClick={() => {
+                if (!window.confirm(`Send this offer automatically to ${pendingCount} customers? It goes out about one per second while the internet is on. Meta charges per message.`)) return;
+                start(async () => {
+                  setAutoMsg(await sendCampaignAutomatically(campaignId));
+                  router.refresh();
+                });
+              }}
+            >
+              Send all automatically ({pendingCount})
+            </button>
+          )}
           {next ? (
             <div className="relative">
               <button className="btn-primary min-h-11 bg-[#0a7d4f] px-5 text-base shadow-none hover:bg-[#086a43]" onClick={() => send(next)} disabled={pending} autoFocus>
@@ -61,6 +90,8 @@ export function CampaignRunner({ recipients }: { recipients: R[] }) {
                 {pending ? "Opening…" : `Send next: ${next.name}`}
               </button>
             </div>
+          ) : sending ? (
+            <div className="rounded-lg bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800">Sending automatically… this page updates by itself.</div>
           ) : (
             <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">All done – everyone on the list has been handled.</div>
           )}
@@ -77,6 +108,7 @@ export function CampaignRunner({ recipients }: { recipients: R[] }) {
             </div>
           </div>
         )}
+        {autoMsg && <p role="status" className={`mt-3 rounded-lg px-3 py-2 text-sm ${autoMsg.ok ? "bg-sky-50 text-sky-900" : "bg-red-50 text-red-800"}`}>{autoMsg.ok ?? autoMsg.error}</p>}
         {res && <WaResultPanel res={res.r} onClose={() => setRes(null)} />}
       </div>
 
@@ -89,16 +121,17 @@ export function CampaignRunner({ recipients }: { recipients: R[] }) {
                 <div className="min-w-0 flex-1">
                   {r.customerId ? <Link className="link" href={`/customers/${r.customerId}`}>{r.name}</Link> : <span className="font-medium">{r.name}</span>}
                   <div className="text-xs text-gray-500">+{r.phone}</div>
+                  {r.status === "FAILED" && r.error && <div className="text-xs text-red-700">{r.error}</div>}
                 </div>
                 <span className={`badge ${cls}`}>{label}</span>
                 <div className="flex gap-1.5">
-                  {r.status !== "OPTED_OUT" && (
+                  {r.status !== "OPTED_OUT" && r.status !== "QUEUED" && (
                     <button className="btn-outline btn-sm text-[#0a7d4f]" onClick={() => send(r)} disabled={pending} aria-label={`Open WhatsApp for ${r.name}`}>
                       <WaGlyph className="h-3.5 w-3.5" />{r.status === "SENT" ? "Again" : "Open"}
                     </button>
                   )}
                   {r.status === "PENDING" && <button className="btn-ghost btn-sm" onClick={() => mark(r, "SKIPPED")}>Skip</button>}
-                  {(r.status === "SKIPPED" || r.status === "SENT") && <button className="btn-ghost btn-sm" onClick={() => mark(r, "PENDING")}>Undo</button>}
+                  {(r.status === "SKIPPED" || r.status === "SENT" || r.status === "FAILED") && <button className="btn-ghost btn-sm" onClick={() => mark(r, "PENDING")}>Undo</button>}
                   {r.status !== "OPTED_OUT" && <button className="btn-ghost btn-sm text-red-600" onClick={() => mark(r, "OPTED_OUT")}>Opted out</button>}
                 </div>
               </li>

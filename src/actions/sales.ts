@@ -8,6 +8,7 @@ import { calcBill, saleStatus, type CartLine } from "@/lib/calc";
 import { closePaidFollowUps, fireEvent } from "@/lib/workflows";
 import { round2, parseDay } from "@/lib/format";
 import { audit, errMsg, getSettings, moveStock, nextNumber, num, optInt, optStr, str, type ActionResult } from "@/lib/server-utils";
+import { cloudConfig, enqueueCloud, kickCloudQueue } from "@/lib/wa-cloud";
 
 export type SalePayload = {
   lines: CartLine[];
@@ -175,6 +176,15 @@ export async function createSale(payload: SalePayload): Promise<{ ok?: boolean; 
         const job = await db.jobCard.findUnique({ where: { id: payload.jobCardId }, select: { number: true, vehicleId: true } });
         await fireEvent("JOB_DELIVERED", { customerId: sale.customerId, vehicleId: job?.vehicleId ?? sale.vehicleId, refType: "JobCard", refId: payload.jobCardId, job: job?.number });
       }
+    }
+    // Automatic WhatsApp bill (Cloud API mode with "send bills automatically" switched on)
+    try {
+      const cloud = await cloudConfig();
+      if (cloud.on && cloud.autoInvoice && (sale.customerId || sale.customerPhone)) {
+        if (await enqueueCloud({ kind: "INVOICE", saleId: sale.id, userId: s.uid, userName: s.name })) kickCloudQueue();
+      }
+    } catch (e) {
+      console.error("[kpr] automatic WhatsApp bill failed", e);
     }
     revalidatePath("/sales");
     revalidatePath("/");

@@ -41,6 +41,28 @@ export function WaResultPanel({
   if (late) res = late;
   return (
     <div role="status" className="page-enter mt-2 w-[min(88vw,340px)] rounded-lg border border-gray-200 bg-white p-3 text-left text-xs text-gray-700 shadow-lg">
+      {res.sent && (
+        <div className="flex items-start gap-1.5 font-semibold text-emerald-700">
+          <svg viewBox="0 0 24 24" className="mt-px h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 6 9 17l-5-5" /></svg>
+          <span>Sent automatically on WhatsApp to +{res.sent.phone}</span>
+        </div>
+      )}
+      {res.cloudQueued && (
+        <>
+          <div className="mb-1 font-semibold text-amber-700">{res.error ? "WhatsApp is busy – will retry" : "No internet – will send by itself"}</div>
+          <p className="text-gray-600">
+            {res.error ?? "The message is saved and goes out automatically as soon as the internet is back."} See <a className="link" href="/whatsapp#automatic">WhatsApp → Automatic</a>.
+          </p>
+        </>
+      )}
+      {res.fallback && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <button type="button" className="btn-outline btn-sm" onClick={() => openWhatsApp(res.fallback!.url)}>
+            <WaGlyph className="h-3.5 w-3.5" />Open in WhatsApp instead
+          </button>
+          <a className="btn-ghost btn-sm" href={res.fallback.webUrl} target="_blank" rel="noopener">WhatsApp Web</a>
+        </div>
+      )}
       {res.queued && !res.ok && (
         <>
           <div className="mb-1 font-semibold text-amber-700">No internet right now – message saved</div>
@@ -103,7 +125,7 @@ export function WaResultPanel({
           <button className="btn-primary btn-sm w-full" disabled={pending}>Open WhatsApp</button>
         </form>
       )}
-      {res.error && !res.needPhone && <p className="text-red-700">{res.error}</p>}
+      {res.error && !res.needPhone && !res.cloudQueued && <p className="mt-1 text-red-700">{res.error}</p>}
       <button type="button" onClick={onClose} className="mt-2 text-gray-500 hover:text-gray-800">Close</button>
     </div>
   );

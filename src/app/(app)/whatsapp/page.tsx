@@ -2,7 +2,10 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requirePage } from "@/lib/auth";
 import { dayRange, fmtDateTime, monthStart, ymd } from "@/lib/format";
-import { WA_LABEL, type WaKind } from "@/lib/wa-templates";
+import { WA_LABEL, waUrl, type WaKind } from "@/lib/wa-templates";
+import { cloudConfig } from "@/lib/wa-cloud";
+import { getSettings } from "@/lib/server-utils";
+import { AutoList } from "./auto-list";
 import { Empty, PageHeader, Section, Stat, TableWrap } from "@/components/ui";
 import { WaGlyph } from "@/components/whatsapp-button";
 import { WaitingList } from "./waiting-list";
@@ -12,23 +15,32 @@ export const metadata = { title: "WhatsApp" };
 export default async function WhatsAppPage() {
   await requirePage("whatsapp");
   const today = ymd();
-  const [optedIn, withPhone, sentToday, sentMonth, campaigns, counts, recent, waiting] = await Promise.all([
+  const [cloud, settings] = await Promise.all([cloudConfig(), getSettings()]);
+  const [optedIn, withPhone, sentToday, sentMonth, campaigns, counts, recent, waiting, auto, autoToday] = await Promise.all([
     db.customer.count({ where: { whatsappOptIn: true, phone: { not: null } } }),
     db.customer.count({ where: { phone: { not: null } } }),
-    db.waMessage.count({ where: { status: "OPENED", openedAt: dayRange(today) } }),
-    db.waMessage.count({ where: { status: "OPENED", openedAt: dayRange(monthStart(), today) } }),
+    db.waMessage.count({ where: { status: { in: ["OPENED", "SENT"] }, openedAt: dayRange(today) } }),
+    db.waMessage.count({ where: { status: { in: ["OPENED", "SENT"] }, openedAt: dayRange(monthStart(), today) } }),
     db.waCampaign.findMany({ orderBy: { createdAt: "desc" }, take: 30 }),
     db.waCampaignRecipient.groupBy({ by: ["campaignId", "status"], _count: true }),
-    db.waMessage.findMany({ where: { status: "OPENED" }, orderBy: { openedAt: "desc" }, take: 40, include: { customer: { select: { id: true, name: true } } } }),
-    db.waMessage.findMany({ where: { status: "QUEUED" }, orderBy: { createdAt: "asc" }, include: { customer: { select: { id: true, name: true } } } }),
+    db.waMessage.findMany({ where: { status: { in: ["OPENED", "SENT"] } }, orderBy: { openedAt: "desc" }, take: 40, include: { customer: { select: { id: true, name: true } } } }),
+    db.waMessage.findMany({ where: { status: "QUEUED", channel: "CLICK" }, orderBy: { createdAt: "asc" }, include: { customer: { select: { id: true, name: true } } } }),
+    db.waMessage.findMany({
+      where: { channel: "CLOUD", OR: [{ status: "QUEUED" }, { status: "FAILED", createdAt: { gte: new Date(Date.now() - 14 * 864e5) } }] },
+      orderBy: [{ sendAfter: "asc" }, { createdAt: "asc" }],
+      take: 200,
+      include: { customer: { select: { id: true, name: true } } },
+    }),
+    db.waMessage.count({ where: { channel: "CLOUD", status: "SENT", openedAt: dayRange(today) } }),
   ]);
+  const now = Date.now();
   const count = (id: number, st?: string) => counts.filter((c) => c.campaignId === id && (!st || c.status === st)).reduce((a, c) => a + c._count, 0);
 
   return (
     <>
       <PageHeader
         title="WhatsApp"
-        subtitle="Free click-to-send: the app writes the message and opens WhatsApp – staff press Send"
+        subtitle={cloud.on ? "Automatic mode: bills, reminders and offers are sent by the software through the WhatsApp Cloud API" : "Free click-to-send: the app writes the message and opens WhatsApp – staff press Send"}
         actions={
           <>
             <Link href="/whatsapp/settings" className="btn-outline">Message wording & settings</Link>
@@ -42,9 +54,22 @@ export default async function WhatsAppPage() {
           preview: m.body.replace(/\*/g, "").replace(/\n+/g, " · "), when: fmtDateTime(m.createdAt),
         }))}
       />
+      {(cloud.on || auto.length > 0) && (
+        <AutoList
+          cloudOn={cloud.on}
+          sentToday={autoToday}
+          items={auto.map((m) => ({
+            id: m.id, status: m.status as "QUEUED" | "FAILED", label: WA_LABEL[m.kind as WaKind] ?? m.kind, customer: m.customer, phone: m.phone,
+            preview: m.body.replace(/\*/g, "").replace(/\n+/g, " · "), error: m.error,
+            scheduled: m.status === "QUEUED" && !!m.sendAfter && m.sendAfter.getTime() > now && m.attempts === 0,
+            when: m.status === "FAILED" ? `failed ${fmtDateTime(m.createdAt)}` : m.sendAfter && m.sendAfter.getTime() > now ? `sends ${fmtDateTime(m.sendAfter)}` : `waiting since ${fmtDateTime(m.createdAt)}`,
+            clickUrl: waUrl(m.phone, m.body, settings.waOpenWith),
+          }))}
+        />
+      )}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Opted in for offers" value={optedIn} hint={`of ${withPhone} customers with a mobile`} tone="good" href="/customers?optin=yes" />
-        <Stat label="Opened today" value={sentToday} hint="messages opened in WhatsApp" />
+        <Stat label="Today" value={sentToday} hint={cloud.on ? "messages sent or opened" : "messages opened in WhatsApp"} />
         <Stat label="This month" value={sentMonth} />
         <Stat label="Offers" value={campaigns.length} hint="broadcast lists" />
       </div>
@@ -91,6 +116,7 @@ export default async function WhatsAppPage() {
                   <div className="text-sm">
                     {m.customer ? <Link className="link" href={`/customers/${m.customer.id}`}>{m.customer.name}</Link> : <span className="font-medium">+{m.phone}</span>}
                     <span className="ml-1.5 text-xs text-gray-500">{WA_LABEL[m.kind as WaKind] ?? m.kind}</span>
+                    {m.channel === "CLOUD" && <span className="badge ml-1.5 bg-emerald-50 text-emerald-700" title="Sent automatically through the WhatsApp Cloud API">Auto</span>}
                   </div>
                   <div className="truncate text-xs text-gray-500" title={m.body}>{m.body.replace(/\*/g, "").replace(/\n+/g, " · ")}</div>
                 </div>

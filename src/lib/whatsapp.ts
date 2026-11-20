@@ -43,7 +43,7 @@ export type ComposeInput = {
   body?: string | null; // ready text (offer broadcasts)
 };
 
-export type Composed = { phone: string | null; text: string; customerId: number | null; saleId: number | null; jobCardId: number | null };
+export type Composed = { phone: string | null; text: string; customerId: number | null; saleId: number | null; jobCardId: number | null; vars: Record<string, string | undefined> };
 
 /** Builds the message for a customer / bill / job / follow-up from its template. */
 export async function composeMessage(input: ComposeInput): Promise<Composed> {
@@ -135,5 +135,6 @@ export async function composeMessage(input: ComposeInput): Promise<Composed> {
     customerId,
     saleId,
     jobCardId,
+    vars,
   };
 }

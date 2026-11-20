@@ -141,4 +141,18 @@ Everything (billing, stock, CRM, reports) works with **no internet**. Only Whats
 - The first time WhatsApp Desktop is opened from the app window, Edge asks "Open WhatsApp?" – tick **Always allow**.
 - Support / testing: starting the server with `KPR_FORCE_OFFLINE=1` makes the app behave as if the internet is down.
 
-An optional automatic mode using the official WhatsApp Cloud API (paid per message) can be added later.
+### Automatic mode – WhatsApp Cloud API (optional, paid by Meta per message)
+
+*WhatsApp → Message wording & settings → Sending method → Automatic*. The software then sends messages itself, also when nobody is at the counter.
+
+1. **Meta account (shop's own):** create a Meta Business account and an app with WhatsApp at developers.facebook.com, add and verify the shop's number (a number used for Cloud API can't stay on the normal WhatsApp app), and create a **permanent access token** (System User).
+2. **Owner enters:** Phone number ID, WhatsApp Business Account ID and the token (stored only in the shop database and backups, never shown again). *Test connection* checks them.
+3. **Templates:** WhatsApp only lets a business start a chat with **templates approved by Meta**. Create them in WhatsApp Manager, then *Load approved templates* and choose one for each message, with its fill-ins for `{{1}}`, `{{2}}`… (e.g. `customer,invoice,total`). Without a template the wording is sent as plain text, which only arrives if the customer messaged the shop in the last 24 hours.
+4. **What sends itself:**
+   - **Bills** after every sale (switch *Send the bill automatically after every sale*).
+   - **Reminders:** tick *Send WhatsApp automatically* on a rule in *Settings → Workflows*; it is sent on the due date and the follow-up is marked done. If sending fails the follow-up stays open for a call.
+   - **Offers:** *Send all automatically* on an offer list (about one per second).
+   - The WhatsApp buttons send directly; *Open in WhatsApp instead* is offered if Meta refuses a message.
+5. **No internet / errors:** automatic messages wait and go out by themselves when the internet is back (checked every minute). Temporary errors retry (2, 4, 8, 16, 32 min); permanent ones are listed under *WhatsApp → Automatic* with the reason in plain words, *Retry*, *Open in WhatsApp* and *Cancel*. A badge on the WhatsApp menu shows failures.
+6. Delivery and read receipts are not shown: they need a public web address (webhook), which an offline shop PC does not have. "Sent" means WhatsApp accepted the message.
+7. Testing / support: `KPR_WA_CLOUD_MOCK=1` pretends to be Meta (logs what would be sent; a message containing `FAILTEST` fails like a real "24-hour window" error).

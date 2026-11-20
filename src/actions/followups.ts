@@ -160,6 +160,7 @@ export async function saveWorkflowRule(_: ActionResult, fd: FormData): Promise<A
       minAmount: Math.max(0, num(fd, "minAmount")),
       assignUserId: optInt(fd, "assignUserId"),
       active: fd.get("active") === "on",
+      autoWhatsApp: fd.get("autoWhatsApp") === "on",
     };
     if (id) await db.workflowRule.update({ where: { id }, data });
     else await db.workflowRule.create({ data });
